@@ -22,6 +22,8 @@
 #define MBUF_CACHE_SIZE 250
 #define BURST_SIZE 32
 
+#define logprintf(...) if (enable_log) { fprintf(logfile, __VA_ARGS__); }
+
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_rx_pkt_len = ETHER_MAX_LEN,
@@ -109,11 +111,11 @@ static struct in_addr filter_dest_ip;
 static uint16_t filter_dest_port;
 static uint16_t filter_source_port;
 static uint8_t  filter_protocol;
-/*
-static int match = 0;
 static bool enable_log = false;
 static FILE *logfile;
-*/
+
+//static int match = 0;
+
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
         snprintf(buff, size, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -161,8 +163,6 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
                 return "undifined";
         }
 }
-
-#define logprintf printf
 
 static int input_filter_info(void)
 {
@@ -340,6 +340,7 @@ static bool filter(struct rte_mbuf *m){
 	struct ipv4_hdr *ih;
 	char buf[256];
 	uint16_t ether_type;
+	//uint32_t rte_pketmbuf_pkt_len;
 	//unsigned int oplen;
 
 	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
@@ -503,7 +504,19 @@ main(int argc, char *argv[])
                         break;
 	}
 
+	if(enable_log){
+                logfile = fopen("output.log", "w");
+                if (logfile == NULL) {
+                        fprintf(stderr, "err cant open file");
+                        return (-1);
+                }
+        }
+
 	/* Call lcore_main on the master core only. */
 	lcore_main();
+
+	if(enable_log){
+		fclose(logfile);
+	}
 	return 0;
 }
