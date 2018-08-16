@@ -432,15 +432,20 @@ lcore_main(void)
 			if (unlikely(nb_rx == 0))
 				continue;
 
+			uint16_t nb_tx = 0;
 			for(int i = 0; i<nb_rx;i++){
 				struct rte_mbuf *m = bufs[i];
 				bool res = filter(m);
 				logprintf("result:%d\n", res);
-			}
 
-			/* Send burst of TX packets, to second port of pair. */
-			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0,
-					bufs, nb_rx);
+				//send
+				if(!res){
+					struct rte_mbuf *tx_bufs[1];
+					tx_bufs[0] = m;
+					const uint16_t cnt = rte_eth_tx_burst(port ^ 1, 0, tx_bufs, 1);
+					nb_tx += cnt;
+				}
+			}
 
 			/* Free any unsent packets. */
 			if (unlikely(nb_tx < nb_rx)) {
