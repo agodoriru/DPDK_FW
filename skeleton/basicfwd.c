@@ -104,6 +104,16 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
+static struct in_addr filter_source_ip;
+static struct in_addr filter_dest_ip;
+static uint16_t filter_dest_port;
+static uint16_t filter_source_port;
+static uint8_t  filter_protocol;
+/*
+static int match = 0;
+static bool enable_log = false;
+static FILE *logfile;
+*/
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
         snprintf(buff, size, "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -154,67 +164,232 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 
 #define logprintf printf
 
-static void filter(struct rte_mbuf **bufs, const uint16_t nb_rx){
-	for(int i=0;i<nb_rx;i++){
-		struct rte_mbuf *m = bufs[i];
-		struct ether_hdr *eh;
-		struct tcp_hdr *th;
-		struct udp_hdr *uh;
-		struct ipv4_hdr *ih;
-		char buf[256];
-		uint16_t ether_type;
-		//unsigned int oplen;
+static int input_filter_info(void)
+{
+        unsigned long int dest_port_ul;
+        unsigned long int src_port_ul;
+        char dest_port_str[256];
+        char src_port_str[256];
+        char dest_ip[256];
+        char src_ip[256];
+        char protocol[256];
+        int res;
 
-		eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
-		ether_type = ntohs(eh->ether_type);
+	//ip dest
+        printf("input filter dest ip:");
+        errno = 0;
+        res = scanf("%s", dest_ip);
+        if(errno != 0) {
+                perror("scanf");
+                return -1;
+        }else if(res != 1) {
+                fprintf(stderr,"scanf failed\n");
+                return -1;
+        }
+        res = inet_pton(AF_INET, dest_ip, &filter_dest_ip);
+        if(res == -1) {
+                perror("inet_pton");
+                return -1;
+        }else if(res == 0) {
+                fprintf(stderr, "invalid address\n");
+                return -1;
+        }
 
-		logprintf("\n==== ether info ====\n");
-        	logprintf("ether dest host:%s\n",mac_address_int_to_str(eh->d_addr.addr_bytes,buf,sizeof(buf)));
-        	logprintf("ether src  host:%s\n",mac_address_int_to_str(eh->s_addr.addr_bytes,buf,sizeof(buf)));
-        	logprintf("ether type:0x%02X:",ether_type);
+	//ip src
+	printf("input filter source ip:");
+        errno = 0;
+        res = scanf("%s", src_ip);
+        if(errno != 0) {
+                perror("scanf");
+                return -1;
+        }else if(res != 1) {
+                fprintf(stderr,"scanf failed\n");
+        }
+        res = inet_pton(AF_INET, src_ip, &filter_source_ip);
+        if(res == -1) {
+                perror("inet_pton");
+                return -1;
+        }else if(res == 0) {
+                fprintf(stderr, "invalid address\n");
+                return -1;
+        }
 
-		switch(ether_type){
-                	case ETHER_TYPE_IPv4:
-                        	logprintf("[IP]\n");
-                        	break;
-                	case ETHER_TYPE_ARP:
-                        	logprintf("[ARP]\n");
-                        	continue;
-                	default:
-                        	logprintf("\n");
-                        	continue;
-        	}
+	//ip proto
+        printf("input filter protocol:");
+        errno = 0;
+        res = scanf("%s", protocol);
+        if(errno != 0) {
+                perror("scanf");
+                return -1;
+        }else if(res != 1) {
+                fprintf(stderr,"scanf failed\n");
+                return -1;
+        }
 
-		ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
-		//oplen = ih->ihl * 4 - sizeof(struct iphdr);
+	if(strcmp(protocol, "TCP") == 0){
+                filter_protocol = IPPROTO_TCP;
+        }else if (strcmp(protocol, "UDP") == 0){
+                filter_protocol = IPPROTO_UDP;
+        }else{
+                fprintf(stderr,"invalid protocol\n");
+                return -1;
+        }
 
-        	logprintf("==== IP info ====\n");
-        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
-        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
-        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-        	//logprintf("oplen:%u\n", oplen);
+	//port dest
+        printf("input filter dest port:");
+        errno = 0;
+        res = scanf("%s", dest_port_str);
+        if(errno != 0) {
+                perror("scanf");
+                return -1;
+        }else if(res != 1) {
+                fprintf(stderr,"scanf failed\n");
+                return -1;
+        }
+	errno = 0;
+        dest_port_ul = strtoul(dest_port_str, NULL, 10);
+        if(errno != 0) {
+                perror("strtoul");
+                return -1;
+        } else if(dest_port_ul > UINT16_MAX) {
+                fprintf(stderr, "port number too large\n");
+                return -1;
+        } else if(dest_port_ul == 0) {
+                fprintf(stderr, "invalid port number\n");
+                return -1;
+        }
+        filter_dest_port = htons((uint16_t)dest_port_ul);
 
-		if (ih->next_proto_id == IPPROTO_TCP) {
-                th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+	errno = 0;
+        dest_port_ul = strtoul(dest_port_str, NULL, 10);
+        if(errno != 0) {
+                perror("strtoul");
+                return -1;
+        } else if(dest_port_ul > UINT16_MAX) {
+                fprintf(stderr, "port number too large\n");
+                return -1;
+        } else if(dest_port_ul == 0) {
+                fprintf(stderr, "invalid port number\n");
+                return -1;
+        }
+        filter_dest_port = htons((uint16_t)dest_port_ul);
+
+	//port src
+	printf("input filter source port:");
+        errno = 0;
+        res = scanf("%s", src_port_str);
+
+        if(errno != 0) {
+                perror("scanf");
+                return -1;
+        }else if(res != 1) {
+                fprintf(stderr,"scanf failed\n");
+                return -1;
+        }
+        errno = 0;
+        src_port_ul = strtoul(src_port_str, NULL, 10);
+        if(errno != 0) {
+                perror("strtoul");
+                return -1;
+        } else if(src_port_ul > UINT16_MAX) {
+                fprintf(stderr, "port number too large\n");
+                return -1;
+        } else if(src_port_ul == 0) {
+                fprintf(stderr, "invalid port number\n");
+                return -1;
+        }
+        filter_source_port = htons((uint16_t)src_port_ul);
+
+        return 0;
+
+}
+
+static bool check_packet(struct ipv4_hdr *ih, void *l4hdr){
+	if(ih->src_addr != filter_source_ip.s_addr) {
+		return false;
+	}
+	if(ih->dst_addr != filter_dest_ip.s_addr) {
+		return false;
+	}
+	if(ih->next_proto_id != filter_protocol) {
+		return false;
+	}
+
+	if(filter_protocol == IPPROTO_TCP) {
+		struct tcp_hdr *th = (struct tcp_hdr *)l4hdr;
+		if(th->src_port != filter_source_port){
+			return false;
+		}
+		if(th->dst_port != filter_dest_port) {
+			return false;
+		}
+	}else if(filter_protocol == IPPROTO_UDP) {
+		struct udp_hdr *uh = (struct udp_hdr *)l4hdr;
+		if(uh->src_port != filter_source_port){
+			return false;
+		}
+		if(uh->dst_port != filter_dest_port) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool filter(struct rte_mbuf *m){
+	struct ether_hdr *eh;
+	struct ipv4_hdr *ih;
+	char buf[256];
+	uint16_t ether_type;
+	//unsigned int oplen;
+
+	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
+	ether_type = ntohs(eh->ether_type);
+
+	logprintf("\n==== ether info ====\n");
+        logprintf("ether dest host:%s\n",mac_address_int_to_str(eh->d_addr.addr_bytes,buf,sizeof(buf)));
+        logprintf("ether src  host:%s\n",mac_address_int_to_str(eh->s_addr.addr_bytes,buf,sizeof(buf)));
+        logprintf("ether type:0x%02X:",ether_type);
+
+	switch(ether_type){
+               	case ETHER_TYPE_IPv4:
+                       	logprintf("[IP]\n");
+                       	break;
+               	case ETHER_TYPE_ARP:
+                       	logprintf("[ARP]\n");
+                       	return false;
+               	default:
+                       	logprintf("\n");
+                       	return false;
+        }
+
+	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
+	//oplen = ih->ihl * 4 - sizeof(struct iphdr);
+       	logprintf("==== IP info ====\n");
+       	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
+       	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
+       	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
+       	//logprintf("oplen:%u\n", oplen);
+
+	if (ih->next_proto_id == IPPROTO_TCP) {
+		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
 		logprintf("==== TCP info ====\n");
                 logprintf("src port:%u\n", ntohs(th->src_port));
                 logprintf("dest port:%u\n", ntohs(th->dst_port));
                 logprintf("seq:%u\n", ntohl(th->sent_seq));
                 logprintf("ack:%u\n", ntohl(th->recv_ack));
 
-                //bool res = check_packet(ih, (const void*)th);
+                bool res = check_packet(ih, (void*)th);
+                return res;
+       	} else if (ih->next_proto_id == IPPROTO_UDP) {
+		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+               	logprintf("==== UDP info ====\n");
+               	logprintf("src port:%u\n", ntohs(uh->src_port));
+               	logprintf("dest port:%u\n", ntohs(uh->dst_port));
 
-                //return res;
-        } else if (ih->next_proto_id == IPPROTO_UDP) {
-                uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
-                logprintf("==== UDP info ====\n");
-                logprintf("src port:%u\n", ntohs(uh->src_port));
-                logprintf("dest port:%u\n", ntohs(uh->dst_port));
-
-                //bool res = check_packet(ih, (const void*)uh);
-                //return res;
-	        }
+                bool res = check_packet(ih, (void*)uh);
+		return res;
 	}
+	return false;
 }
 
 /*
@@ -257,7 +432,12 @@ lcore_main(void)
 			if (unlikely(nb_rx == 0))
 				continue;
 
-			filter(bufs, nb_rx); 
+			for(int i = 0; i<nb_rx;i++){
+				struct rte_mbuf *m = bufs[i];
+				bool res = filter(m);
+				logprintf("result:%d\n", res);
+			}
+
 			/* Send burst of TX packets, to second port of pair. */
 			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0,
 					bufs, nb_rx);
@@ -312,8 +492,13 @@ main(int argc, char *argv[])
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
+	 while(1){
+                int res = input_filter_info();
+                if (res == 0)
+                        break;
+	}
+
 	/* Call lcore_main on the master core only. */
 	lcore_main();
-
 	return 0;
 }
