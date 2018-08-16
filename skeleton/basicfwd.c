@@ -14,7 +14,7 @@
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <arpa/inet.h>
-
+#include <stdbool.h>
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
 
@@ -158,6 +158,8 @@ static void filter(struct rte_mbuf **bufs, const uint16_t nb_rx){
 	for(int i=0;i<nb_rx;i++){
 		struct rte_mbuf *m = bufs[i];
 		struct ether_hdr *eh;
+		struct tcp_hdr *th;
+		struct udp_hdr *uh;
 		struct ipv4_hdr *ih;
 		char buf[256];
 		uint16_t ether_type;
@@ -166,10 +168,10 @@ static void filter(struct rte_mbuf **bufs, const uint16_t nb_rx){
 		eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
 		ether_type = ntohs(eh->ether_type);
 
-		logprintf("==== ether info ====\n");
+		logprintf("\n==== ether info ====\n");
         	logprintf("ether dest host:%s\n",mac_address_int_to_str(eh->d_addr.addr_bytes,buf,sizeof(buf)));
         	logprintf("ether src  host:%s\n",mac_address_int_to_str(eh->s_addr.addr_bytes,buf,sizeof(buf)));
-        	logprintf("ether type:0x%02X ",ether_type);
+        	logprintf("ether type:0x%02X:",ether_type);
 
 		switch(ether_type){
                 	case ETHER_TYPE_IPv4:
@@ -189,8 +191,29 @@ static void filter(struct rte_mbuf **bufs, const uint16_t nb_rx){
         	logprintf("==== IP info ====\n");
         	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
         	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
-        	logprintf("ip protocol:%s\n", get_ip_protocol(ih));
+        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
         	//logprintf("oplen:%u\n", oplen);
+
+		if (ih->next_proto_id == IPPROTO_TCP) {
+                th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		logprintf("==== TCP info ====\n");
+                logprintf("src port:%u\n", ntohs(th->src_port));
+                logprintf("dest port:%u\n", ntohs(th->dst_port));
+                logprintf("seq:%u\n", ntohl(th->sent_seq));
+                logprintf("ack:%u\n", ntohl(th->recv_ack));
+
+                //bool res = check_packet(ih, (const void*)th);
+
+                //return res;
+        } else if (ih->next_proto_id == IPPROTO_UDP) {
+                uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+                logprintf("==== UDP info ====\n");
+                logprintf("src port:%u\n", ntohs(uh->src_port));
+                logprintf("dest port:%u\n", ntohs(uh->dst_port));
+
+                //bool res = check_packet(ih, (const void*)uh);
+                //return res;
+	        }
 	}
 }
 
