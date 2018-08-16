@@ -9,6 +9,11 @@
 #include <rte_cycles.h>
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
+#include <rte_ether.h>
+#include <rte_ip.h>
+#include <rte_tcp.h>
+#include <rte_udp.h>
+#include <arpa/inet.h>
 
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
@@ -99,6 +104,96 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
+static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
+{
+        snprintf(buff, size, "%02x:%02x:%02x:%02x:%02x:%02x",
+                 hwaddr[0], hwaddr[1], hwaddr[2], hwaddr[3], hwaddr[4],
+                 hwaddr[5]);
+        return (buff);
+}
+
+static char *IP_address_int_to_IP_address_str(u_int32_t ip, char *buff, socklen_t size)
+{
+        struct in_addr *addr;
+        addr = (struct in_addr *)&ip;
+        inet_ntop(AF_INET, addr, buff, size);
+        return (buff);
+}
+
+static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
+{
+        const char *protocol[] = {
+                "undifined",
+                "ICMP",
+                "IGMP",
+                "undifined",
+                "IP",
+                "undifined",
+                "TCP",
+                "CBT",
+                "EGP",
+                "IGP",
+                "undifined",
+                "undifined",
+                "undifined",
+                "undifined",
+                "undifined",
+                "undifined",
+                "undifined",
+                "UDP",
+        };
+
+        // logprintf("protocol : %u ",iphdr->protocol);
+
+        if ((iphdr->next_proto_id) <= 17) {
+                return protocol[iphdr->next_proto_id];
+        } else {
+                return "undifined";
+        }
+}
+
+#define logprintf printf
+
+static void filter(struct rte_mbuf **bufs, const uint16_t nb_rx){
+	for(int i=0;i<nb_rx;i++){
+		struct rte_mbuf *m = bufs[i];
+		struct ether_hdr *eh;
+		struct ipv4_hdr *ih;
+		char buf[256];
+		uint16_t ether_type;
+		//unsigned int oplen;
+
+		eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
+		ether_type = ntohs(eh->ether_type);
+
+		logprintf("==== ether info ====\n");
+        	logprintf("ether dest host:%s\n",mac_address_int_to_str(eh->d_addr.addr_bytes,buf,sizeof(buf)));
+        	logprintf("ether src  host:%s\n",mac_address_int_to_str(eh->s_addr.addr_bytes,buf,sizeof(buf)));
+        	logprintf("ether type:0x%02X ",ether_type);
+
+		switch(ether_type){
+                	case ETHER_TYPE_IPv4:
+                        	logprintf("[IP]\n");
+                        	break;
+                	case ETHER_TYPE_ARP:
+                        	logprintf("[ARP]\n");
+                        	continue;
+                	default:
+                        	logprintf("\n");
+                        	continue;
+        	}
+
+		ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
+		//oplen = ih->ihl * 4 - sizeof(struct iphdr);
+
+        	logprintf("==== IP info ====\n");
+        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
+        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
+        	logprintf("ip protocol:%s\n", get_ip_protocol(ih));
+        	//logprintf("oplen:%u\n", oplen);
+	}
+}
+
 /*
  * The lcore main. This is the main thread that does the work, reading from
  * an input port and writing to an output port.
@@ -139,6 +234,7 @@ lcore_main(void)
 			if (unlikely(nb_rx == 0))
 				continue;
 
+			filter(bufs, nb_rx); 
 			/* Send burst of TX packets, to second port of pair. */
 			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0,
 					bufs, nb_rx);
