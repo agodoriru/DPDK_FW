@@ -23,6 +23,8 @@
 #define BURST_SIZE 32
 
 #define logprintf(...) if (enable_log) { fprintf(logfile, __VA_ARGS__); }
+static bool enable_log = true;
+static FILE *logfile;
 
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
@@ -106,15 +108,12 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-static struct in_addr filter_source_ip;
-static struct in_addr filter_dest_ip;
-static uint16_t filter_dest_port;
-static uint16_t filter_source_port;
-static uint8_t  filter_protocol;
-static bool enable_log = false;
-static FILE *logfile;
-
-//static int match = 0;
+#define  RULE_COUNT 5
+static struct in_addr filter_source_ip[RULE_COUNT];
+static struct in_addr filter_dest_ip[RULE_COUNT];
+static uint16_t filter_dest_port[RULE_COUNT];
+static uint16_t filter_source_port[RULE_COUNT];
+static uint8_t  filter_protocol[RULE_COUNT];
 
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
@@ -164,7 +163,7 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
         }
 }
 
-static int input_filter_info(void)
+static int input_filter_info(int count)
 {
         unsigned long int dest_port_ul;
         unsigned long int src_port_ul;
@@ -175,6 +174,7 @@ static int input_filter_info(void)
         char protocol[256];
         int res;
 
+	printf("\n[filter:%d]\n", count);
 	//ip dest
         printf("input filter dest ip:");
         errno = 0;
@@ -186,7 +186,7 @@ static int input_filter_info(void)
                 fprintf(stderr,"scanf failed\n");
                 return -1;
         }
-        res = inet_pton(AF_INET, dest_ip, &filter_dest_ip);
+        res = inet_pton(AF_INET, dest_ip, &filter_dest_ip[count]);
         if(res == -1) {
                 perror("inet_pton");
                 return -1;
@@ -205,7 +205,7 @@ static int input_filter_info(void)
         }else if(res != 1) {
                 fprintf(stderr,"scanf failed\n");
         }
-        res = inet_pton(AF_INET, src_ip, &filter_source_ip);
+        res = inet_pton(AF_INET, src_ip, &filter_source_ip[count]);
         if(res == -1) {
                 perror("inet_pton");
                 return -1;
@@ -227,9 +227,9 @@ static int input_filter_info(void)
         }
 
 	if(strcmp(protocol, "TCP") == 0){
-                filter_protocol = IPPROTO_TCP;
+                filter_protocol[count] = IPPROTO_TCP;
         }else if (strcmp(protocol, "UDP") == 0){
-                filter_protocol = IPPROTO_UDP;
+                filter_protocol[count] = IPPROTO_UDP;
         }else{
                 fprintf(stderr,"invalid protocol\n");
                 return -1;
@@ -258,21 +258,7 @@ static int input_filter_info(void)
                 fprintf(stderr, "invalid port number\n");
                 return -1;
         }
-        filter_dest_port = htons((uint16_t)dest_port_ul);
-
-	errno = 0;
-        dest_port_ul = strtoul(dest_port_str, NULL, 10);
-        if(errno != 0) {
-                perror("strtoul");
-                return -1;
-        } else if(dest_port_ul > UINT16_MAX) {
-                fprintf(stderr, "port number too large\n");
-                return -1;
-        } else if(dest_port_ul == 0) {
-                fprintf(stderr, "invalid port number\n");
-                return -1;
-        }
-        filter_dest_port = htons((uint16_t)dest_port_ul);
+        filter_dest_port[count] = htons((uint16_t)dest_port_ul);
 
 	//port src
 	printf("input filter source port:");
@@ -298,37 +284,36 @@ static int input_filter_info(void)
                 fprintf(stderr, "invalid port number\n");
                 return -1;
         }
-        filter_source_port = htons((uint16_t)src_port_ul);
-
+        filter_source_port[count] = htons((uint16_t)src_port_ul);
         return 0;
 
 }
 
-static bool check_packet(struct ipv4_hdr *ih, void *l4hdr){
-	if(ih->src_addr != filter_source_ip.s_addr) {
+static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, int count){
+	if(ih->src_addr != filter_source_ip[count].s_addr) {
 		return false;
 	}
-	if(ih->dst_addr != filter_dest_ip.s_addr) {
+	if(ih->dst_addr != filter_dest_ip[count].s_addr) {
 		return false;
 	}
-	if(ih->next_proto_id != filter_protocol) {
+	if(ih->next_proto_id != filter_protocol[count]) {
 		return false;
 	}
 
-	if(filter_protocol == IPPROTO_TCP) {
+	if(filter_protocol[count] == IPPROTO_TCP) {
 		struct tcp_hdr *th = (struct tcp_hdr *)l4hdr;
-		if(th->src_port != filter_source_port){
+		if(th->src_port != filter_source_port[count]){
 			return false;
 		}
-		if(th->dst_port != filter_dest_port) {
+		if(th->dst_port != filter_dest_port[count]) {
 			return false;
 		}
-	}else if(filter_protocol == IPPROTO_UDP) {
+	}else if(filter_protocol[count] == IPPROTO_UDP) {
 		struct udp_hdr *uh = (struct udp_hdr *)l4hdr;
-		if(uh->src_port != filter_source_port){
+		if(uh->src_port != filter_source_port[count]){
 			return false;
 		}
-		if(uh->dst_port != filter_dest_port) {
+		if(uh->dst_port != filter_dest_port[count]) {
 			return false;
 		}
 	}
@@ -379,24 +364,37 @@ static bool filter(struct rte_mbuf *m){
                 logprintf("seq:%u\n", ntohl(th->sent_seq));
                 logprintf("ack:%u\n", ntohl(th->recv_ack));
 
-                bool res = check_packet(ih, (void*)th);
-                return res;
+		for(int i=0;i<RULE_COUNT; i++){
+	                bool res = check_packet(ih, (void*)th, i);
+	               	if(res){
+				return true;
+			}
+		}
+		return false;
+
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
 		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
                	logprintf("dest port:%u\n", ntohs(uh->dst_port));
 
-                bool res = check_packet(ih, (void*)uh);
-		return res;
+                for(int i=0;i<RULE_COUNT; i++){
+	                bool res = check_packet(ih, (void*)uh, i);
+	               	if(res){
+				return true;
+			}
+		}
+		return false;
+	}else {
+		return false;
 	}
-	return false;
 }
 
 /*
  * The lcore main. This is the main thread that does the work, reading from
  * an input port and writing to an output port.
  */
+
 static __attribute__((noreturn)) void
 lcore_main(void)
 {
@@ -501,10 +499,12 @@ main(int argc, char *argv[])
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
-	 while(1){
-                int res = input_filter_info();
-                if (res == 0)
-                        break;
+	for(int i=0; i<RULE_COUNT; i++) {
+		while(1){
+			int res = input_filter_info(i);
+			if (res == 0)
+				break;
+		}
 	}
 
 	if(enable_log){
