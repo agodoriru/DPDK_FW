@@ -427,26 +427,27 @@ lcore_main(void)
 
 			/* Get burst of RX packets, from first port of pair. */
 			struct rte_mbuf *bufs[BURST_SIZE];
+			struct rte_mbuf *tx_bufs[BURST_SIZE];
 			const uint16_t nb_rx = rte_eth_rx_burst(port, 0,
 					bufs, BURST_SIZE);
+			uint16_t packet_count = 0;
 
 			if (unlikely(nb_rx == 0))
 				continue;
 
-			uint16_t nb_tx = 0;
 			for(int i = 0; i<nb_rx;i++){
 				struct rte_mbuf *m = bufs[i];
 				bool res = filter(m);
 				logprintf("result:%d\n", res);
 
-				//send
 				if(!res){
-					struct rte_mbuf *tx_bufs[1];
-					tx_bufs[0] = m;
-					const uint16_t cnt = rte_eth_tx_burst(port ^ 1, 0, tx_bufs, 1);
-					nb_tx += cnt;
+					tx_bufs[packet_count] = m;
+					packet_count++;
 				}
 			}
+
+			//send
+			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0, tx_bufs, packet_count);
 
 			/* Free any unsent packets. */
 			if (unlikely(nb_tx < nb_rx)) {
