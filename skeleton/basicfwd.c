@@ -108,7 +108,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 5
+#define  RULE_COUNT 1
 static struct in_addr filter_source_ip[RULE_COUNT];
 static struct in_addr filter_dest_ip[RULE_COUNT];
 static uint16_t filter_dest_port[RULE_COUNT];
@@ -349,15 +349,18 @@ static bool filter(struct rte_mbuf *m){
         }
 
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
-	//oplen = ih->ihl * 4 - sizeof(struct iphdr);
+	int oplen = ((ih->version_ihl)<<4) * 4 - sizeof(struct ipv4_hdr);
+	int ihl = (ih->version_ihl)<<4;
+
        	logprintf("==== IP info ====\n");
+	logprintf("ihl:%d\n", ihl);
        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-       	//logprintf("oplen:%u\n", oplen);
+       	logprintf("oplen:%d\n",oplen );
 
 	if (ih->next_proto_id == IPPROTO_TCP) {
-		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
 		logprintf("==== TCP info ====\n");
                 logprintf("src port:%u\n", ntohs(th->src_port));
                 logprintf("dest port:%u\n", ntohs(th->dst_port));
@@ -373,7 +376,7 @@ static bool filter(struct rte_mbuf *m){
 		return false;
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
-		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
                	logprintf("dest port:%u\n", ntohs(uh->dst_port));
