@@ -114,6 +114,8 @@ static uint8_t  filter_protocol;
 static bool enable_log = false;
 static FILE *logfile;
 
+#define RULE_COUNT 100
+
 //static int match = 0;
 
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
@@ -260,20 +262,6 @@ static int input_filter_info(void)
         }
         filter_dest_port = htons((uint16_t)dest_port_ul);
 
-	errno = 0;
-        dest_port_ul = strtoul(dest_port_str, NULL, 10);
-        if(errno != 0) {
-                perror("strtoul");
-                return -1;
-        } else if(dest_port_ul > UINT16_MAX) {
-                fprintf(stderr, "port number too large\n");
-                return -1;
-        } else if(dest_port_ul == 0) {
-                fprintf(stderr, "invalid port number\n");
-                return -1;
-        }
-        filter_dest_port = htons((uint16_t)dest_port_ul);
-
 	//port src
 	printf("input filter source port:");
         errno = 0;
@@ -304,7 +292,7 @@ static int input_filter_info(void)
 
 }
 
-static bool check_packet(struct ipv4_hdr *ih, void *l4hdr){
+static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, unsigned int count){
 	if(ih->src_addr != filter_source_ip.s_addr) {
 		return false;
 	}
@@ -317,7 +305,7 @@ static bool check_packet(struct ipv4_hdr *ih, void *l4hdr){
 
 	if(filter_protocol == IPPROTO_TCP) {
 		struct tcp_hdr *th = (struct tcp_hdr *)l4hdr;
-		if(th->src_port != filter_source_port){
+		if(th->src_port != filter_source_port+count){
 			return false;
 		}
 		if(th->dst_port != filter_dest_port) {
@@ -325,7 +313,7 @@ static bool check_packet(struct ipv4_hdr *ih, void *l4hdr){
 		}
 	}else if(filter_protocol == IPPROTO_UDP) {
 		struct udp_hdr *uh = (struct udp_hdr *)l4hdr;
-		if(uh->src_port != filter_source_port){
+		if(uh->src_port != filter_source_port+count){
 			return false;
 		}
 		if(uh->dst_port != filter_dest_port) {
@@ -379,16 +367,23 @@ static bool filter(struct rte_mbuf *m){
                 logprintf("seq:%u\n", ntohl(th->sent_seq));
                 logprintf("ack:%u\n", ntohl(th->recv_ack));
 
-                bool res = check_packet(ih, (void*)th);
-                return res;
+		for(int i=0;i<RULE_COUNT;i++){
+                	bool res = check_packet(ih, (void*)th, i);
+                	return res;
+		}
+		return false;
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
 		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
                	logprintf("dest port:%u\n", ntohs(uh->dst_port));
 
-                bool res = check_packet(ih, (void*)uh);
-		return res;
+		for(int i=0;i<RULE_COUNT;i++){
+                        bool res = check_packet(ih, (void*)uh, i);
+                        return res;
+                }
+                return false;
+
 	}
 	return false;
 }
