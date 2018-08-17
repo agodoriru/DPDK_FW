@@ -450,10 +450,10 @@ lcore_main(void)
 			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0, tx_bufs, packet_count);
 
 			/* Free any unsent packets. */
-			if (unlikely(nb_tx < nb_rx)) {
+			if (unlikely(nb_tx < packet_count)) {
 				uint16_t buf;
 				for (buf = nb_tx; buf < nb_rx; buf++)
-					rte_pktmbuf_free(bufs[buf]);
+					rte_pktmbuf_free(tx_bufs[buf]);
 			}
 		}
 	}
