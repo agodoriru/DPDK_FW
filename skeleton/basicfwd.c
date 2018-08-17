@@ -443,6 +443,8 @@ lcore_main(void)
 				if(!res){
 					tx_bufs[packet_count] = m;
 					packet_count++;
+				}else{
+					rte_pktmbuf_free(m);
 				}
 			}
 
