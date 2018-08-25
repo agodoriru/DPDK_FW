@@ -349,12 +349,18 @@ static bool filter(struct rte_mbuf *m){
         }
 
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
-	//oplen = ih->ihl * 4 - sizeof(struct iphdr);
+	
+	int ihl_mask = 15;
+	int version_mask = 240;
+	int oplen = ( (ih->version_ihl) & ihl_mask ) * 4 - sizeof(struct ipv4_hdr);
+	
        	logprintf("==== IP info ====\n");
+	logprintf("ip header version:%d\n", (ih ->version_ihl & version_mask )>>4)
+	logprintf("ip header length:%d\n:", ih->version_ihl  & ihl_mask)
        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-       	//logprintf("oplen:%u\n", oplen);
+       	logprintf("oplen:%u\n", oplen);
 
 	if (ih->next_proto_id == IPPROTO_TCP) {
 		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
