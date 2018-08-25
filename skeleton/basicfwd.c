@@ -356,14 +356,14 @@ static bool filter(struct rte_mbuf *m){
 	
        	logprintf("==== IP info ====\n");
 	logprintf("ip header version:%d\n", (ih ->version_ihl & version_mask )>>4)
-	logprintf("ip header length:%d\n:", ih->version_ihl  & ihl_mask)
+	logprintf("ip header length:%d\n", ih->version_ihl  & ihl_mask)
        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
        	logprintf("oplen:%u\n", oplen);
 
 	if (ih->next_proto_id == IPPROTO_TCP) {
-		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
 		logprintf("==== TCP info ====\n");
                 logprintf("src port:%u\n", ntohs(th->src_port));
                 logprintf("dest port:%u\n", ntohs(th->dst_port));
@@ -379,7 +379,7 @@ static bool filter(struct rte_mbuf *m){
 		return false;
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
-		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr));
+		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
                	logprintf("dest port:%u\n", ntohs(uh->dst_port));
