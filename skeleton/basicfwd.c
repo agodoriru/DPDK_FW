@@ -350,8 +350,8 @@ static bool filter(struct rte_mbuf *m){
 
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
 	
-	int ihl_mask = 15;
-	int version_mask = 240;
+	int ihl_mask = 15;       // 0x00001111
+	int version_mask = 240;  // 0x11110000
 	int oplen = ( (ih->version_ihl) & ihl_mask ) * 4 - sizeof(struct ipv4_hdr);
 	
        	logprintf("==== IP info ====\n");
