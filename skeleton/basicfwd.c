@@ -108,7 +108,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 5
+#define  RULE_COUNT 1
 static struct in_addr filter_source_ip[RULE_COUNT];
 static struct in_addr filter_dest_ip[RULE_COUNT];
 static uint16_t filter_dest_port[RULE_COUNT];
@@ -325,8 +325,15 @@ static bool filter(struct rte_mbuf *m){
 	struct ipv4_hdr *ih;
 	char buf[256];
 	uint16_t ether_type;
-	//uint32_t rte_pketmbuf_pkt_len;
+	uint32_t packet_length = rte_pktmbuf_pkt_len(m);
+	uint32_t lest = packet_length;
 	//unsigned int oplen;
+
+	if(lest <sizeof(struct ether_hdr)) {
+		fprintf(stderr, "lest:%d < sizeof(ether_hdr) Too short\nDrop!\n", lest);
+		return true;
+	}
+	lest -= sizeof(struct ether_hdr);
 
 	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
 	ether_type = ntohs(eh->ether_type);
@@ -348,8 +355,13 @@ static bool filter(struct rte_mbuf *m){
                        	return false;
         }
 
-	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
+	if(lest < sizeof(struct ipv4_hdr)) {
+		fprintf(stderr, "lest%d < sizeof(ipv4_hdr) Too short\nDrop!\n", lest);
+		return true;
+	}
+	lest -= sizeof(struct ipv4_hdr);
 	
+	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
 	int ihl_mask = 15;       // 0x00001111
 	int version_mask = 240;  // 0x11110000
 	int oplen = ( (ih->version_ihl) & ihl_mask ) * 4 - sizeof(struct ipv4_hdr);
@@ -363,6 +375,13 @@ static bool filter(struct rte_mbuf *m){
        	logprintf("oplen:%u\n", oplen);
 
 	if (ih->next_proto_id == IPPROTO_TCP) {
+
+		if(lest < sizeof(struct tcp_hdr)) {
+			fprintf(stderr, "lest%d < sizeof(tcp_hdr) Too short\nDrop!\n", lest);
+			return true;
+		}
+		lest -= sizeof(struct tcp_hdr);
+
 		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
 		logprintf("==== TCP info ====\n");
                 logprintf("src port:%u\n", ntohs(th->src_port));
@@ -379,6 +398,13 @@ static bool filter(struct rte_mbuf *m){
 		return false;
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
+
+		if(lest < sizeof(struct tcp_hdr)) {
+			fprintf(stderr, "lest%d < sizeof(udp_hdr) Too short\nDrop!\n", lest);
+			return true;
+		}
+		lest -= sizeof(struct udp_hdr);
+
 		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
