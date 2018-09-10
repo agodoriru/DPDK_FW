@@ -326,15 +326,15 @@ static bool filter(struct rte_mbuf *m){
 	char buf[256];
 	uint16_t ether_type;
 	uint32_t packet_length = rte_pktmbuf_pkt_len(m);
-	uint32_t lest = packet_length;
+	int lest = (int)packet_length;
 	//unsigned int oplen;
 
-	if(lest <sizeof(struct ether_hdr)) {
+	if(lest < (int)sizeof(struct ether_hdr)) {
 		fprintf(stderr, "lest:%d < sizeof(ether_hdr) Too short\nDrop!\n", lest);
 		return true;
 	}
-	lest -= sizeof(struct ether_hdr);
 
+	lest -= (int)sizeof(struct ether_hdr);
 	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
 	ether_type = ntohs(eh->ether_type);
 
@@ -355,12 +355,11 @@ static bool filter(struct rte_mbuf *m){
                        	return false;
         }
 
-	if(lest < sizeof(struct ipv4_hdr)) {
-		fprintf(stderr, "lest%d < sizeof(ipv4_hdr) Too short\nDrop!\n", lest);
+	if(lest < (int)sizeof(struct ipv4_hdr)) {
+		fprintf(stderr, "lest:%d < sizeof(ipv4_hdr) Too short\nDrop!\n", lest);
 		return true;
 	}
 	lest -= sizeof(struct ipv4_hdr);
-	
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
 	int ihl_mask = 15;       // 0x00001111
 	int version_mask = 240;  // 0x11110000
@@ -377,8 +376,8 @@ static bool filter(struct rte_mbuf *m){
 	lest -= oplen;
 	if (ih->next_proto_id == IPPROTO_TCP) {
 
-		if(lest < sizeof(struct tcp_hdr)) {
-			fprintf(stderr, "lest%d < sizeof(tcp_hdr) Too short\nDrop!\n", lest);
+		if(lest < (int)sizeof(struct tcp_hdr)) {
+			fprintf(stderr, "lest:%d < sizeof(tcp_hdr) Too short\nDrop!\n", lest);
 			return true;
 		}
 		lest -= sizeof(struct tcp_hdr);
@@ -404,7 +403,7 @@ static bool filter(struct rte_mbuf *m){
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
 
-		if(lest < sizeof(struct tcp_hdr)) {
+		if(lest < (int)sizeof(struct tcp_hdr)) {
 			fprintf(stderr, "lest%d < sizeof(udp_hdr) Too short\nDrop!\n", lest);
 			return true;
 		}
