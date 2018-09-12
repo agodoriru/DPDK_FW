@@ -388,11 +388,6 @@ static bool filter(struct rte_mbuf *m){
                 logprintf("dest port:%u\n", ntohs(th->dst_port));
                 logprintf("seq:%u\n", ntohl(th->sent_seq));
                 logprintf("ack:%u\n", ntohl(th->recv_ack));
-				logprintf("lest:%d\n", lest);
-				logprintf("size struct ether hdr:%lu\n", sizeof(struct ether_hdr));
-				logprintf("size struct ip dr:%lu\n", sizeof(struct ipv4_hdr));
-				logprintf("size oplen:%d\n", oplen);
-				logprintf("size struct tcphdr:%lu\n", sizeof(struct tcp_hdr));
 		for(int i=0;i<RULE_COUNT; i++){
 	                bool res = check_packet(ih, (void*)th, i);
 	               	if(res){
