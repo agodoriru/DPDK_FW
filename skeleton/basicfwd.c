@@ -395,7 +395,7 @@ static bool filter(struct rte_mbuf *m){
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
 
-		if(lest < (int)sizeof(struct tcp_hdr)) {
+		if(lest < (int)sizeof(struct udp_hdr)) {
 			return true;
 		}
 		lest -= sizeof(struct udp_hdr);
