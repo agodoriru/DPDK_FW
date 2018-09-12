@@ -108,7 +108,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 5
+#define  RULE_COUNT 1
 static struct in_addr filter_source_ip[RULE_COUNT];
 static struct in_addr filter_dest_ip[RULE_COUNT];
 static uint16_t filter_dest_port[RULE_COUNT];
@@ -325,9 +325,15 @@ static bool filter(struct rte_mbuf *m){
 	struct ipv4_hdr *ih;
 	char buf[256];
 	uint16_t ether_type;
-	//uint32_t rte_pketmbuf_pkt_len;
+	uint32_t packet_length = rte_pktmbuf_pkt_len(m);
+	int lest = (int)packet_length;
 	//unsigned int oplen;
 
+	if(lest < (int)sizeof(struct ether_hdr)) {
+		return true;
+	}
+
+	lest -= (int)sizeof(struct ether_hdr);
 	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
 	ether_type = ntohs(eh->ether_type);
 
@@ -348,8 +354,11 @@ static bool filter(struct rte_mbuf *m){
                        	return false;
         }
 
+	if(lest < (int)sizeof(struct ipv4_hdr)) {
+		return true;
+	}
+	lest -= sizeof(struct ipv4_hdr);
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
-	
 	int ihl_mask = 15;       // 0x00001111
 	int version_mask = 240;  // 0x11110000
 	int oplen = ( (ih->version_ihl) & ihl_mask ) * 4 - sizeof(struct ipv4_hdr);
@@ -360,16 +369,22 @@ static bool filter(struct rte_mbuf *m){
        	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
        	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
        	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-       	logprintf("oplen:%u\n", oplen);
-
+       logprintf("tol:%u\n", ih -> total_length);
+	   logprintf("oplen:%u\n", oplen);
+	lest -= oplen;
 	if (ih->next_proto_id == IPPROTO_TCP) {
+
+		if(lest < (int)sizeof(struct tcp_hdr)) {
+			return true;
+		}
+		lest -= sizeof(struct tcp_hdr);
+
 		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
 		logprintf("==== TCP info ====\n");
                 logprintf("src port:%u\n", ntohs(th->src_port));
                 logprintf("dest port:%u\n", ntohs(th->dst_port));
                 logprintf("seq:%u\n", ntohl(th->sent_seq));
                 logprintf("ack:%u\n", ntohl(th->recv_ack));
-
 		for(int i=0;i<RULE_COUNT; i++){
 	                bool res = check_packet(ih, (void*)th, i);
 	               	if(res){
@@ -379,11 +394,16 @@ static bool filter(struct rte_mbuf *m){
 		return false;
 
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
+
+		if(lest < (int)sizeof(struct udp_hdr)) {
+			return true;
+		}
+		lest -= sizeof(struct udp_hdr);
+
 		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
                	logprintf("==== UDP info ====\n");
                	logprintf("src port:%u\n", ntohs(uh->src_port));
                	logprintf("dest port:%u\n", ntohs(uh->dst_port));
-
                 for(int i=0;i<RULE_COUNT; i++){
 	                bool res = check_packet(ih, (void*)uh, i);
 	               	if(res){
@@ -442,6 +462,7 @@ lcore_main(void)
 			for(int i = 0; i<nb_rx;i++){
 				struct rte_mbuf *m = bufs[i];
 				bool res = filter(m);
+				logprintf("size:%d\n", rte_pktmbuf_pkt_len(m));
 				logprintf("result:%d\n", res);
 
 				if(!res){
