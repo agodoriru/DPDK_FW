@@ -330,7 +330,6 @@ static bool filter(struct rte_mbuf *m){
 	//unsigned int oplen;
 
 	if(lest < (int)sizeof(struct ether_hdr)) {
-		fprintf(stderr, "lest:%d < sizeof(ether_hdr) Too short\nDrop!\n", lest);
 		return true;
 	}
 
@@ -356,7 +355,6 @@ static bool filter(struct rte_mbuf *m){
         }
 
 	if(lest < (int)sizeof(struct ipv4_hdr)) {
-		fprintf(stderr, "lest:%d < sizeof(ipv4_hdr) Too short\nDrop!\n", lest);
 		return true;
 	}
 	lest -= sizeof(struct ipv4_hdr);
@@ -377,7 +375,6 @@ static bool filter(struct rte_mbuf *m){
 	if (ih->next_proto_id == IPPROTO_TCP) {
 
 		if(lest < (int)sizeof(struct tcp_hdr)) {
-			fprintf(stderr, "lest:%d < sizeof(tcp_hdr) Too short\nDrop!\n", lest);
 			return true;
 		}
 		lest -= sizeof(struct tcp_hdr);
@@ -399,7 +396,6 @@ static bool filter(struct rte_mbuf *m){
        	} else if (ih->next_proto_id == IPPROTO_UDP) {
 
 		if(lest < (int)sizeof(struct tcp_hdr)) {
-			fprintf(stderr, "lest%d < sizeof(udp_hdr) Too short\nDrop!\n", lest);
 			return true;
 		}
 		lest -= sizeof(struct udp_hdr);
