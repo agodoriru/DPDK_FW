@@ -1,9 +1,9 @@
 {
 	"rule_1": {
-		"src_ip" : 1.2.3.4,
-		"src_ip" : 4.3.2.1,
-		"protocol" : "TCP",
-		"src_ip" : 1234,
-		"src_ip" : 2345
+		"dst_ip":"1.2.3.4",
+		"src_ip":"4.3.2.1",
+		"protocol":"TCP",
+		"dst_port":1234,
+		"src_port":"2345"
 	}
 }
