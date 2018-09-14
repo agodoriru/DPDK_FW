@@ -28,9 +28,9 @@ static FILE *logfile;
 
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
-		.max_rx_pkt_len = ETHER_MAX_LEN,
-		.ignore_offload_bitfield = 1,
-	},
+		   .max_rx_pkt_len = ETHER_MAX_LEN,
+		   .ignore_offload_bitfield = 1,
+		   },
 };
 
 /* basicfwd.c: Basic DPDK skeleton forwarding example. */
@@ -39,8 +39,7 @@ static const struct rte_eth_conf port_conf_default = {
  * Initializes a given port using global settings and with the RX buffers
  * coming from the mbuf_pool passed as a parameter.
  */
-static inline int
-port_init(uint16_t port, struct rte_mempool *mbuf_pool)
+static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 {
 	struct rte_eth_conf port_conf = port_conf_default;
 	const uint16_t rx_rings = 1, tx_rings = 1;
@@ -56,8 +55,7 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 
 	rte_eth_dev_info_get(port, &dev_info);
 	if (dev_info.tx_offload_capa & DEV_TX_OFFLOAD_MBUF_FAST_FREE)
-		port_conf.txmode.offloads |=
-			DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+		port_conf.txmode.offloads |= DEV_TX_OFFLOAD_MBUF_FAST_FREE;
 
 	/* Configure the Ethernet device. */
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
@@ -71,7 +69,8 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	/* Allocate and set up 1 RX queue per Ethernet port. */
 	for (q = 0; q < rx_rings; q++) {
 		retval = rte_eth_rx_queue_setup(port, q, nb_rxd,
-				rte_eth_dev_socket_id(port), NULL, mbuf_pool);
+						rte_eth_dev_socket_id(port),
+						NULL, mbuf_pool);
 		if (retval < 0)
 			return retval;
 	}
@@ -82,7 +81,8 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	/* Allocate and set up 1 TX queue per Ethernet port. */
 	for (q = 0; q < tx_rings; q++) {
 		retval = rte_eth_tx_queue_setup(port, q, nb_txd,
-				rte_eth_dev_socket_id(port), &txconf);
+						rte_eth_dev_socket_id(port),
+						&txconf);
 		if (retval < 0)
 			return retval;
 	}
@@ -96,11 +96,11 @@ port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	struct ether_addr addr;
 	rte_eth_macaddr_get(port, &addr);
 	printf("Port %u MAC: %02" PRIx8 " %02" PRIx8 " %02" PRIx8
-			   " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
-			port,
-			addr.addr_bytes[0], addr.addr_bytes[1],
-			addr.addr_bytes[2], addr.addr_bytes[3],
-			addr.addr_bytes[4], addr.addr_bytes[5]);
+	       " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
+	       port,
+	       addr.addr_bytes[0], addr.addr_bytes[1],
+	       addr.addr_bytes[2], addr.addr_bytes[3],
+	       addr.addr_bytes[4], addr.addr_bytes[5]);
 
 	/* Enable RX in promiscuous mode for the Ethernet device. */
 	rte_eth_promiscuous_enable(port);
@@ -113,214 +113,215 @@ static struct in_addr filter_source_ip[RULE_COUNT];
 static struct in_addr filter_dest_ip[RULE_COUNT];
 static uint16_t filter_dest_port[RULE_COUNT];
 static uint16_t filter_source_port[RULE_COUNT];
-static uint8_t  filter_protocol[RULE_COUNT];
+static uint8_t filter_protocol[RULE_COUNT];
 
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
-        snprintf(buff, size, "%02x:%02x:%02x:%02x:%02x:%02x",
-                 hwaddr[0], hwaddr[1], hwaddr[2], hwaddr[3], hwaddr[4],
-                 hwaddr[5]);
-        return (buff);
+	snprintf(buff, size, "%02x:%02x:%02x:%02x:%02x:%02x",
+		 hwaddr[0], hwaddr[1], hwaddr[2], hwaddr[3], hwaddr[4],
+		 hwaddr[5]);
+	return (buff);
 }
 
-static char *IP_address_int_to_IP_address_str(u_int32_t ip, char *buff, socklen_t size)
+static char *IP_address_int_to_IP_address_str(u_int32_t ip, char *buff,
+					      socklen_t size)
 {
-        struct in_addr *addr;
-        addr = (struct in_addr *)&ip;
-        inet_ntop(AF_INET, addr, buff, size);
-        return (buff);
+	struct in_addr *addr;
+	addr = (struct in_addr *)&ip;
+	inet_ntop(AF_INET, addr, buff, size);
+	return (buff);
 }
 
 static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 {
-        const char *protocol[] = {
-                "undifined",
-                "ICMP",
-                "IGMP",
-                "undifined",
-                "IP",
-                "undifined",
-                "TCP",
-                "CBT",
-                "EGP",
-                "IGP",
-                "undifined",
-                "undifined",
-                "undifined",
-                "undifined",
-                "undifined",
-                "undifined",
-                "undifined",
-                "UDP",
-        };
+	const char *protocol[] = {
+		"undifined",
+		"ICMP",
+		"IGMP",
+		"undifined",
+		"IP",
+		"undifined",
+		"TCP",
+		"CBT",
+		"EGP",
+		"IGP",
+		"undifined",
+		"undifined",
+		"undifined",
+		"undifined",
+		"undifined",
+		"undifined",
+		"undifined",
+		"UDP",
+	};
 
-        // logprintf("protocol : %u ",iphdr->protocol);
+	// logprintf("protocol : %u ",iphdr->protocol);
 
-        if ((iphdr->next_proto_id) <= 17) {
-                return protocol[iphdr->next_proto_id];
-        } else {
-                return "undifined";
-        }
+	if ((iphdr->next_proto_id) <= 17) {
+		return protocol[iphdr->next_proto_id];
+	} else {
+		return "undifined";
+	}
 }
 
 static int input_filter_info(int count)
 {
-        unsigned long int dest_port_ul;
-        unsigned long int src_port_ul;
-        char dest_port_str[256];
-        char src_port_str[256];
-        char dest_ip[256];
-        char src_ip[256];
-        char protocol[256];
-        int res;
+	unsigned long int dest_port_ul;
+	unsigned long int src_port_ul;
+	char dest_port_str[256];
+	char src_port_str[256];
+	char dest_ip[256];
+	char src_ip[256];
+	char protocol[256];
+	int res;
 
 	printf("\n[filter:%d]\n", count);
 	//ip dest
-        printf("input filter dest ip:");
-        errno = 0;
-        res = scanf("%s", dest_ip);
-        if(errno != 0) {
-                perror("scanf");
-                return -1;
-        }else if(res != 1) {
-                fprintf(stderr,"scanf failed\n");
-                return -1;
-        }
-        res = inet_pton(AF_INET, dest_ip, &filter_dest_ip[count]);
-        if(res == -1) {
-                perror("inet_pton");
-                return -1;
-        }else if(res == 0) {
-                fprintf(stderr, "invalid address\n");
-                return -1;
-        }
-
+	printf("input filter dest ip:");
+	errno = 0;
+	res = scanf("%s", dest_ip);
+	if (errno != 0) {
+		perror("scanf");
+		return -1;
+	} else if (res != 1) {
+		fprintf(stderr, "scanf failed\n");
+		return -1;
+	}
+	res = inet_pton(AF_INET, dest_ip, &filter_dest_ip[count]);
+	if (res == -1) {
+		perror("inet_pton");
+		return -1;
+	} else if (res == 0) {
+		fprintf(stderr, "invalid address\n");
+		return -1;
+	}
 	//ip src
 	printf("input filter source ip:");
-        errno = 0;
-        res = scanf("%s", src_ip);
-        if(errno != 0) {
-                perror("scanf");
-                return -1;
-        }else if(res != 1) {
-                fprintf(stderr,"scanf failed\n");
-        }
-        res = inet_pton(AF_INET, src_ip, &filter_source_ip[count]);
-        if(res == -1) {
-                perror("inet_pton");
-                return -1;
-        }else if(res == 0) {
-                fprintf(stderr, "invalid address\n");
-                return -1;
-        }
-
+	errno = 0;
+	res = scanf("%s", src_ip);
+	if (errno != 0) {
+		perror("scanf");
+		return -1;
+	} else if (res != 1) {
+		fprintf(stderr, "scanf failed\n");
+	}
+	res = inet_pton(AF_INET, src_ip, &filter_source_ip[count]);
+	if (res == -1) {
+		perror("inet_pton");
+		return -1;
+	} else if (res == 0) {
+		fprintf(stderr, "invalid address\n");
+		return -1;
+	}
 	//ip proto
-        printf("input filter protocol:");
-        errno = 0;
-        res = scanf("%s", protocol);
-        if(errno != 0) {
-                perror("scanf");
-                return -1;
-        }else if(res != 1) {
-                fprintf(stderr,"scanf failed\n");
-                return -1;
-        }
+	printf("input filter protocol:");
+	errno = 0;
+	res = scanf("%s", protocol);
+	if (errno != 0) {
+		perror("scanf");
+		return -1;
+	} else if (res != 1) {
+		fprintf(stderr, "scanf failed\n");
+		return -1;
+	}
 
-	if(strcmp(protocol, "TCP") == 0){
-                filter_protocol[count] = IPPROTO_TCP;
-        }else if (strcmp(protocol, "UDP") == 0){
-                filter_protocol[count] = IPPROTO_UDP;
-        }else{
-                fprintf(stderr,"invalid protocol\n");
-                return -1;
-        }
+	if (strcmp(protocol, "TCP") == 0) {
+		filter_protocol[count] = IPPROTO_TCP;
+	} else if (strcmp(protocol, "UDP") == 0) {
+		filter_protocol[count] = IPPROTO_UDP;
+	} else {
+		fprintf(stderr, "invalid protocol\n");
+		return -1;
+	}
 
 	//port dest
-        printf("input filter dest port:");
-        errno = 0;
-        res = scanf("%s", dest_port_str);
-        if(errno != 0) {
-                perror("scanf");
-                return -1;
-        }else if(res != 1) {
-                fprintf(stderr,"scanf failed\n");
-                return -1;
-        }
+	printf("input filter dest port:");
 	errno = 0;
-        dest_port_ul = strtoul(dest_port_str, NULL, 10);
-        if(errno != 0) {
-                perror("strtoul");
-                return -1;
-        } else if(dest_port_ul > UINT16_MAX) {
-                fprintf(stderr, "port number too large\n");
-                return -1;
-        } else if(dest_port_ul == 0) {
-                fprintf(stderr, "invalid port number\n");
-                return -1;
-        }
-        filter_dest_port[count] = htons((uint16_t)dest_port_ul);
+	res = scanf("%s", dest_port_str);
+	if (errno != 0) {
+		perror("scanf");
+		return -1;
+	} else if (res != 1) {
+		fprintf(stderr, "scanf failed\n");
+		return -1;
+	}
+	errno = 0;
+	dest_port_ul = strtoul(dest_port_str, NULL, 10);
+	if (errno != 0) {
+		perror("strtoul");
+		return -1;
+	} else if (dest_port_ul > UINT16_MAX) {
+		fprintf(stderr, "port number too large\n");
+		return -1;
+	} else if (dest_port_ul == 0) {
+		fprintf(stderr, "invalid port number\n");
+		return -1;
+	}
+	filter_dest_port[count] = htons((uint16_t) dest_port_ul);
 
 	//port src
 	printf("input filter source port:");
-        errno = 0;
-        res = scanf("%s", src_port_str);
+	errno = 0;
+	res = scanf("%s", src_port_str);
 
-        if(errno != 0) {
-                perror("scanf");
-                return -1;
-        }else if(res != 1) {
-                fprintf(stderr,"scanf failed\n");
-                return -1;
-        }
-        errno = 0;
-        src_port_ul = strtoul(src_port_str, NULL, 10);
-        if(errno != 0) {
-                perror("strtoul");
-                return -1;
-        } else if(src_port_ul > UINT16_MAX) {
-                fprintf(stderr, "port number too large\n");
-                return -1;
-        } else if(src_port_ul == 0) {
-                fprintf(stderr, "invalid port number\n");
-                return -1;
-        }
-        filter_source_port[count] = htons((uint16_t)src_port_ul);
-        return 0;
+	if (errno != 0) {
+		perror("scanf");
+		return -1;
+	} else if (res != 1) {
+		fprintf(stderr, "scanf failed\n");
+		return -1;
+	}
+	errno = 0;
+	src_port_ul = strtoul(src_port_str, NULL, 10);
+	if (errno != 0) {
+		perror("strtoul");
+		return -1;
+	} else if (src_port_ul > UINT16_MAX) {
+		fprintf(stderr, "port number too large\n");
+		return -1;
+	} else if (src_port_ul == 0) {
+		fprintf(stderr, "invalid port number\n");
+		return -1;
+	}
+	filter_source_port[count] = htons((uint16_t) src_port_ul);
+	return 0;
 
 }
 
-static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, int count){
-	if(ih->src_addr != filter_source_ip[count].s_addr) {
+static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, int count)
+{
+	if (ih->src_addr != filter_source_ip[count].s_addr) {
 		return false;
 	}
-	if(ih->dst_addr != filter_dest_ip[count].s_addr) {
+	if (ih->dst_addr != filter_dest_ip[count].s_addr) {
 		return false;
 	}
-	if(ih->next_proto_id != filter_protocol[count]) {
+	if (ih->next_proto_id != filter_protocol[count]) {
 		return false;
 	}
 
-	if(filter_protocol[count] == IPPROTO_TCP) {
+	if (filter_protocol[count] == IPPROTO_TCP) {
 		struct tcp_hdr *th = (struct tcp_hdr *)l4hdr;
-		if(th->src_port != filter_source_port[count]){
+		if (th->src_port != filter_source_port[count]) {
 			return false;
 		}
-		if(th->dst_port != filter_dest_port[count]) {
+		if (th->dst_port != filter_dest_port[count]) {
 			return false;
 		}
-	}else if(filter_protocol[count] == IPPROTO_UDP) {
+	} else if (filter_protocol[count] == IPPROTO_UDP) {
 		struct udp_hdr *uh = (struct udp_hdr *)l4hdr;
-		if(uh->src_port != filter_source_port[count]){
+		if (uh->src_port != filter_source_port[count]) {
 			return false;
 		}
-		if(uh->dst_port != filter_dest_port[count]) {
+		if (uh->dst_port != filter_dest_port[count]) {
 			return false;
 		}
 	}
 	return true;
 }
 
-static bool filter(struct rte_mbuf *m){
+static bool filter(struct rte_mbuf *m)
+{
 	struct ether_hdr *eh;
 	struct ipv4_hdr *ih;
 	char buf[256];
@@ -329,89 +330,106 @@ static bool filter(struct rte_mbuf *m){
 	int lest = (int)packet_length;
 	//unsigned int oplen;
 
-	if(lest < (int)sizeof(struct ether_hdr)) {
+	if (lest < (int)sizeof(struct ether_hdr)) {
 		return true;
 	}
 
 	lest -= (int)sizeof(struct ether_hdr);
-	eh = rte_pktmbuf_mtod(m, struct ether_hdr*);
+	eh = rte_pktmbuf_mtod(m, struct ether_hdr *);
 	ether_type = ntohs(eh->ether_type);
 
 	logprintf("\n==== ether info ====\n");
-        logprintf("ether dest host:%s\n",mac_address_int_to_str(eh->d_addr.addr_bytes,buf,sizeof(buf)));
-        logprintf("ether src  host:%s\n",mac_address_int_to_str(eh->s_addr.addr_bytes,buf,sizeof(buf)));
-        logprintf("ether type:0x%02X:",ether_type);
+	logprintf("ether dest host:%s\n",
+		  mac_address_int_to_str(eh->d_addr.addr_bytes, buf,
+					 sizeof(buf)));
+	logprintf("ether src  host:%s\n",
+		  mac_address_int_to_str(eh->s_addr.addr_bytes, buf,
+					 sizeof(buf)));
+	logprintf("ether type:0x%02X:", ether_type);
 
-	switch(ether_type){
-               	case ETHER_TYPE_IPv4:
-                       	logprintf("[IP]\n");
-                       	break;
-               	case ETHER_TYPE_ARP:
-                       	logprintf("[ARP]\n");
-                       	return false;
-               	default:
-                       	logprintf("\n");
-                       	return false;
-        }
+	switch (ether_type) {
+	case ETHER_TYPE_IPv4:
+		logprintf("[IP]\n");
+		break;
+	case ETHER_TYPE_ARP:
+		logprintf("[ARP]\n");
+		return false;
+	default:
+		logprintf("\n");
+		return false;
+	}
 
-	if(lest < (int)sizeof(struct ipv4_hdr)) {
+	if (lest < (int)sizeof(struct ipv4_hdr)) {
 		return true;
 	}
 	lest -= sizeof(struct ipv4_hdr);
-	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr*, sizeof(struct ether_hdr));
-	int ihl_mask = 15;       // 0x00001111
-	int version_mask = 240;  // 0x11110000
-	int oplen = ( (ih->version_ihl) & ihl_mask ) * 4 - sizeof(struct ipv4_hdr);
-	
-       	logprintf("==== IP info ====\n");
-	logprintf("ip header version:%d\n", (ih ->version_ihl & version_mask )>>4)
-	logprintf("ip header length:%d\n", ih->version_ihl  & ihl_mask)
-       	logprintf("src ip:%s\n", IP_address_int_to_IP_address_str(ih->src_addr, buf, sizeof(buf)));
-       	logprintf("dest ip:%s\n", IP_address_int_to_IP_address_str(ih->dst_addr, buf, sizeof(buf)));
-       	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-       logprintf("tol:%u\n", ih -> total_length);
-	   logprintf("oplen:%u\n", oplen);
+	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
+				     sizeof(struct ether_hdr));
+	int ihl_mask = 15;	// 0x00001111
+	int version_mask = 240;	// 0x11110000
+	int oplen =
+	    ((ih->version_ihl) & ihl_mask) * 4 - sizeof(struct ipv4_hdr);
+
+	logprintf("==== IP info ====\n");
+	logprintf("ip header version:%d\n",
+		  (ih->version_ihl & version_mask) >> 4)
+	    logprintf("ip header length:%d\n", ih->version_ihl & ihl_mask)
+	    logprintf("src ip:%s\n",
+		      IP_address_int_to_IP_address_str(ih->src_addr, buf,
+						       sizeof(buf)));
+	logprintf("dest ip:%s\n",
+		  IP_address_int_to_IP_address_str(ih->dst_addr, buf,
+						   sizeof(buf)));
+	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
+	logprintf("tol:%u\n", ih->total_length);
+	logprintf("oplen:%u\n", oplen);
 	lest -= oplen;
 	if (ih->next_proto_id == IPPROTO_TCP) {
 
-		if(lest < (int)sizeof(struct tcp_hdr)) {
+		if (lest < (int)sizeof(struct tcp_hdr)) {
 			return true;
 		}
 		lest -= sizeof(struct tcp_hdr);
 
-		struct tcp_hdr *th = rte_pktmbuf_mtod_offset(m, struct tcp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
+		struct tcp_hdr *th =
+		    rte_pktmbuf_mtod_offset(m, struct tcp_hdr *,
+					    sizeof(struct ether_hdr) +
+					    sizeof(struct ipv4_hdr) + oplen);
 		logprintf("==== TCP info ====\n");
-                logprintf("src port:%u\n", ntohs(th->src_port));
-                logprintf("dest port:%u\n", ntohs(th->dst_port));
-                logprintf("seq:%u\n", ntohl(th->sent_seq));
-                logprintf("ack:%u\n", ntohl(th->recv_ack));
-		for(int i=0;i<RULE_COUNT; i++){
-	                bool res = check_packet(ih, (void*)th, i);
-	               	if(res){
+		logprintf("src port:%u\n", ntohs(th->src_port));
+		logprintf("dest port:%u\n", ntohs(th->dst_port));
+		logprintf("seq:%u\n", ntohl(th->sent_seq));
+		logprintf("ack:%u\n", ntohl(th->recv_ack));
+		for (int i = 0; i < RULE_COUNT; i++) {
+			bool res = check_packet(ih, (void *)th, i);
+			if (res) {
 				return true;
 			}
 		}
 		return false;
 
-       	} else if (ih->next_proto_id == IPPROTO_UDP) {
+	} else if (ih->next_proto_id == IPPROTO_UDP) {
 
-		if(lest < (int)sizeof(struct udp_hdr)) {
+		if (lest < (int)sizeof(struct udp_hdr)) {
 			return true;
 		}
 		lest -= sizeof(struct udp_hdr);
 
-		struct udp_hdr *uh = rte_pktmbuf_mtod_offset(m, struct udp_hdr*, sizeof(struct ether_hdr) + sizeof(struct ipv4_hdr) + oplen);
-               	logprintf("==== UDP info ====\n");
-               	logprintf("src port:%u\n", ntohs(uh->src_port));
-               	logprintf("dest port:%u\n", ntohs(uh->dst_port));
-                for(int i=0;i<RULE_COUNT; i++){
-	                bool res = check_packet(ih, (void*)uh, i);
-	               	if(res){
+		struct udp_hdr *uh =
+		    rte_pktmbuf_mtod_offset(m, struct udp_hdr *,
+					    sizeof(struct ether_hdr) +
+					    sizeof(struct ipv4_hdr) + oplen);
+		logprintf("==== UDP info ====\n");
+		logprintf("src port:%u\n", ntohs(uh->src_port));
+		logprintf("dest port:%u\n", ntohs(uh->dst_port));
+		for (int i = 0; i < RULE_COUNT; i++) {
+			bool res = check_packet(ih, (void *)uh, i);
+			if (res) {
 				return true;
 			}
 		}
 		return false;
-	}else {
+	} else {
 		return false;
 	}
 }
@@ -421,8 +439,8 @@ static bool filter(struct rte_mbuf *m){
  * an input port and writing to an output port.
  */
 
-static __attribute__((noreturn)) void
-lcore_main(void)
+static __attribute__ ((noreturn))
+void lcore_main(void)
 {
 	uint16_t port;
 
@@ -431,15 +449,14 @@ lcore_main(void)
 	 * for best performance.
 	 */
 	RTE_ETH_FOREACH_DEV(port)
-		if (rte_eth_dev_socket_id(port) > 0 &&
-				rte_eth_dev_socket_id(port) !=
-						(int)rte_socket_id())
-			printf("WARNING, port %u is on remote NUMA node to "
-					"polling thread.\n\tPerformance will "
-					"not be optimal.\n", port);
+	    if (rte_eth_dev_socket_id(port) > 0 &&
+		rte_eth_dev_socket_id(port) != (int)rte_socket_id())
+		printf("WARNING, port %u is on remote NUMA node to "
+		       "polling thread.\n\tPerformance will "
+		       "not be optimal.\n", port);
 
 	printf("\nCore %u forwarding packets. [Ctrl+C to quit]\n",
-			rte_lcore_id());
+	       rte_lcore_id());
 
 	/* Run until the application is quit or killed. */
 	for (;;) {
@@ -453,28 +470,31 @@ lcore_main(void)
 			struct rte_mbuf *bufs[BURST_SIZE];
 			struct rte_mbuf *tx_bufs[BURST_SIZE];
 			const uint16_t nb_rx = rte_eth_rx_burst(port, 0,
-					bufs, BURST_SIZE);
+								bufs,
+								BURST_SIZE);
 			uint16_t packet_count = 0;
 
 			if (unlikely(nb_rx == 0))
 				continue;
 
-			for(int i = 0; i<nb_rx;i++){
+			for (int i = 0; i < nb_rx; i++) {
 				struct rte_mbuf *m = bufs[i];
 				bool res = filter(m);
 				logprintf("size:%d\n", rte_pktmbuf_pkt_len(m));
 				logprintf("result:%d\n", res);
 
-				if(!res){
+				if (!res) {
 					tx_bufs[packet_count] = m;
 					packet_count++;
-				}else{
+				} else {
 					rte_pktmbuf_free(m);
 				}
 			}
 
 			//send
-			const uint16_t nb_tx = rte_eth_tx_burst(port ^ 1, 0, tx_bufs, packet_count);
+			const uint16_t nb_tx =
+			    rte_eth_tx_burst(port ^ 1, 0, tx_bufs,
+					     packet_count);
 
 			/* Free any unsent packets. */
 			if (unlikely(nb_tx < packet_count)) {
@@ -490,8 +510,7 @@ lcore_main(void)
  * The main function, which does initialization and calls the per-lcore
  * functions.
  */
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	struct rte_mempool *mbuf_pool;
 	unsigned nb_ports;
@@ -512,40 +531,42 @@ main(int argc, char *argv[])
 
 	/* Creates a new mempool in memory to hold the mbufs. */
 	mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
-		MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
+					    MBUF_CACHE_SIZE, 0,
+					    RTE_MBUF_DEFAULT_BUF_SIZE,
+					    rte_socket_id());
 
 	if (mbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
 	/* Initialize all ports. */
 	RTE_ETH_FOREACH_DEV(portid)
-		if (port_init(portid, mbuf_pool) != 0)
-			rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
-					portid);
+	    if (port_init(portid, mbuf_pool) != 0)
+		rte_exit(EXIT_FAILURE, "Cannot init port %" PRIu16 "\n",
+			 portid);
 
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
-	for(int i=0; i<RULE_COUNT; i++) {
-		while(1){
+	for (int i = 0; i < RULE_COUNT; i++) {
+		while (1) {
 			int res = input_filter_info(i);
 			if (res == 0)
 				break;
 		}
 	}
 
-	if(enable_log){
-                logfile = fopen("output.log", "w");
-                if (logfile == NULL) {
-                        fprintf(stderr, "err cant open file");
-                        return (-1);
-                }
-        }
+	if (enable_log) {
+		logfile = fopen("output.log", "w");
+		if (logfile == NULL) {
+			fprintf(stderr, "err cant open file");
+			return (-1);
+		}
+	}
 
 	/* Call lcore_main on the master core only. */
 	lcore_main();
 
-	if(enable_log){
+	if (enable_log) {
 		fclose(logfile);
 	}
 	return 0;
