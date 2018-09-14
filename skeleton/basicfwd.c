@@ -400,6 +400,8 @@ static bool filter(struct rte_mbuf *m)
 		logprintf("dest port:%u\n", ntohs(th->dst_port));
 		logprintf("seq:%u\n", ntohl(th->sent_seq));
 		logprintf("ack:%u\n", ntohl(th->recv_ack));
+		logprintf("cksum:%d\n", ntohs(th->cksum));
+		logprintf("res:%d\n", rte_ipv4_udptcp_cksum(ih, th));
 		for (int i = 0; i < RULE_COUNT; i++) {
 			bool res = check_packet(ih, (void *)th, i);
 			if (res) {
