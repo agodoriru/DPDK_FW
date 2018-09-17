@@ -15,6 +15,9 @@
 #include <rte_udp.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <jansson.h>
+
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
 
@@ -166,6 +169,23 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 
 static int input_filter_info(int count)
 {
+	char path[256];
+	char json_config_path[256];
+	memset(path, '\0', 256);
+	getcwd(path, 256);
+	// will fix
+	sprintf(json_config_path, "%s/../test/config.json", path);
+
+	json_t *json_config;
+	json_error_t error;
+	json_config = json_load_file(json_config_path, 0, &error);
+	if(json_config == NULL) {
+		fprintf(stderr, "error on line %d : %s \n", error.line, error.text);
+		fprintf(stderr, "exit\n");
+		return -1;
+	}
+	fprintf(stdout, "get json done\n");
+
 	unsigned long int dest_port_ul;
 	unsigned long int src_port_ul;
 	char dest_port_str[256];
@@ -550,6 +570,8 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < RULE_COUNT; i++) {
 		while (1) {
 			int res = input_filter_info(i);
+			if (res == -1)
+				return -1;
 			if (res == 0)
 				break;
 		}
