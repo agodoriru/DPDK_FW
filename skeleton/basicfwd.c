@@ -111,7 +111,7 @@ static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 1
+#define  RULE_COUNT 5
 static struct in_addr filter_source_ip[RULE_COUNT];
 static struct in_addr filter_dest_ip[RULE_COUNT];
 static uint16_t filter_dest_port[RULE_COUNT];
@@ -213,6 +213,18 @@ static int input_filter_info(int count)
 			fprintf(stderr, "error\nkey:5tuple not found\nexit\n");
 			return -1;
 		}
+
+		json_t *protocol;
+		protocol = json_object_get(tuple_filter, "protocol");
+
+		char protocol_str[256];
+		strcpy(protocol_str,json_string_value(protocol));
+
+		if (strcmp(protocol_str, "TCP") == 0) {
+			filter_protocol[size] = IPPROTO_TCP;
+		} else if(strcmp(protocol_str, "UDP") == 0) {
+			filter_protocol[size] = IPPROTO_UDP;
+		}
 	}
 
 	unsigned long int dest_port_ul;
@@ -262,6 +274,7 @@ static int input_filter_info(int count)
 		fprintf(stderr, "invalid address\n");
 		return -1;
 	}
+	/*
 	//ip proto
 	printf("input filter protocol:");
 	errno = 0;
@@ -282,6 +295,7 @@ static int input_filter_info(int count)
 		fprintf(stderr, "invalid protocol\n");
 		return -1;
 	}
+	*/
 
 	//port dest
 	printf("input filter dest port:");
@@ -613,6 +627,13 @@ int main(int argc, char *argv[])
 			return (-1);
 		}
 	}
+	/*
+	// for debug use
+	fprintf(stdout, "for debug use\n");
+	for(int i = 0 ; i < 3; i++) {
+		fprintf(stdout, "filter pro[%d] : %hhu\n", i, filter_protocol[i]);
+	}
+	*/
 
 	/* Call lcore_main on the master core only. */
 	lcore_main();
