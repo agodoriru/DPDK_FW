@@ -198,7 +198,21 @@ static int input_filter_info(int count)
 	size_t size = json_array_size(filter);
 	json_t *one_filter;
 	json_array_foreach(filter, size, one_filter) {
+
+		json_t *name;
+		name = json_object_get(one_filter, "name");
+		if(name == NULL) {
+			fprintf(stderr, "error\nkey:name not found\nexit\n");
+			return -1;
+		}
 		fprintf(stdout, "filter name : %s\n", json_string_value(json_object_get(one_filter, "name")));
+
+		json_t *tuple_filter;
+		tuple_filter = json_object_get(one_filter, "5tuple");
+		if(tuple_filter == NULL) {
+			fprintf(stderr, "error\nkey:5tuple not found\nexit\n");
+			return -1;
+		}
 	}
 
 	unsigned long int dest_port_ul;
