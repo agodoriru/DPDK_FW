@@ -186,6 +186,21 @@ static int input_filter_info(int count)
 	}
 	fprintf(stdout, "get json done\n");
 
+	json_t *filter;
+	filter = json_object_get(json_config, "filter");
+	if(filter == NULL) {
+		fprintf(stderr, "error\n");
+		fprintf(stderr, "key:filter not found\n");
+		fprintf(stderr, "exit\n");
+		return -1;
+	}
+
+	size_t size = json_array_size(filter);
+	json_t *one_filter;
+	json_array_foreach(filter, size, one_filter) {
+		fprintf(stdout, "filter name : %s\n", json_string_value(json_object_get(one_filter, "name")));
+	}
+
 	unsigned long int dest_port_ul;
 	unsigned long int src_port_ul;
 	char dest_port_str[256];
