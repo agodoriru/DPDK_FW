@@ -225,6 +225,27 @@ static int input_filter_info(int count)
 		} else if(strcmp(protocol_str, "UDP") == 0) {
 			filter_protocol[size] = IPPROTO_UDP;
 		}
+
+		json_t *dst_port_json;
+		dst_port_json = json_object_get(tuple_filter, "dst_port");
+
+		char dst_port_str[256];
+		strcpy(dst_port_str, json_string_value(dst_port_json));
+
+		errno = 0;
+		unsigned long int dst_port_ul;
+		dst_port_ul = strtoul(dst_port_str, NULL, 10);
+		if (errno != 0) {
+			perror("strtoul");
+			return -1;
+		} else if (dst_port_ul > UINT16_MAX) {
+			fprintf(stderr, "port number too large\n");
+			return -1;
+		} else if (dst_port_ul == 0) {
+			fprintf(stderr, "invalid port number\n");
+			return -1;
+		}
+		filter_dest_port[size] = htons((uint16_t) dst_port_ul);
 	}
 
 	unsigned long int dest_port_ul;
@@ -296,7 +317,7 @@ static int input_filter_info(int count)
 		return -1;
 	}
 	*/
-
+	/*
 	//port dest
 	printf("input filter dest port:");
 	errno = 0;
@@ -321,7 +342,7 @@ static int input_filter_info(int count)
 		return -1;
 	}
 	filter_dest_port[count] = htons((uint16_t) dest_port_ul);
-
+	*/
 	//port src
 	printf("input filter source port:");
 	errno = 0;
