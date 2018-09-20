@@ -246,6 +246,25 @@ static int input_filter_info(int count)
 			return -1;
 		}
 		filter_dest_port[size] = htons((uint16_t) dst_port_ul);
+
+		json_t *src_port_json;
+		src_port_json = json_object_get(tuple_filter, "src_port");
+
+		char src_port_str[256];
+		strcpy(src_port_str, json_string_value(src_port_json));
+
+		errno = 0;
+		unsigned long int src_port_ul;
+		src_port_ul = strtoul(src_port_str, NULL, 10);
+		if(errno != 0) {
+			perror("strtoul");
+			return -1;
+		} else if (src_port_ul > UINT16_MAX) {
+			fprintf(stderr, "port number too large\n");
+		} else if (src_port_ul == 0){
+			fprintf(stderr, "invalid port number\n");
+		}
+		filter_source_port[size] = htons((uint16_t) src_port_ul);
 	}
 
 	unsigned long int dest_port_ul;
@@ -343,6 +362,7 @@ static int input_filter_info(int count)
 	}
 	filter_dest_port[count] = htons((uint16_t) dest_port_ul);
 	*/
+	/*
 	//port src
 	printf("input filter source port:");
 	errno = 0;
@@ -368,6 +388,7 @@ static int input_filter_info(int count)
 		return -1;
 	}
 	filter_source_port[count] = htons((uint16_t) src_port_ul);
+	*/
 	return 0;
 
 }
