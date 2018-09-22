@@ -214,6 +214,37 @@ static int input_filter_info(int count)
 			return -1;
 		}
 
+		json_t *dst_ip;
+		dst_ip = json_object_get(tuple_filter, "dst_ip");
+
+		char dst_ip_str[256];
+		strcpy(dst_ip_str, json_string_value(dst_ip));
+
+		int res;
+		res = inet_pton(AF_INET, dst_ip_str, &filter_dest_ip[size]);
+		if (res == -1) {
+			perror("inet_pton");
+			return -1;
+		} else if (res == 0) {
+			fprintf(stderr, "invalid dst ip address\n");
+			return -1;
+		}
+
+		json_t *src_ip;
+		src_ip = json_object_get(tuple_filter, "src_ip");
+
+		char src_ip_str[256];
+		strcpy(src_ip_str, json_string_value(src_ip));
+
+		res = inet_pton(AF_INET, src_ip_str, &filter_source_ip[size]);
+		if (res == -1) {
+			perror("inet_pton");
+			return -1;
+		} else if (res == 0) {
+			fprintf(stderr, "invalid src ip address\n");
+			return -1;
+		}
+
 		json_t *protocol;
 		protocol = json_object_get(tuple_filter, "protocol");
 
@@ -277,6 +308,7 @@ static int input_filter_info(int count)
 	int res;
 
 	printf("\n[filter:%d]\n", count);
+	/*
 	//ip dest
 	printf("input filter dest ip:");
 	errno = 0;
@@ -314,6 +346,7 @@ static int input_filter_info(int count)
 		fprintf(stderr, "invalid address\n");
 		return -1;
 	}
+	*/
 	/*
 	//ip proto
 	printf("input filter protocol:");
