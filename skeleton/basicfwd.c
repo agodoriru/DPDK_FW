@@ -205,7 +205,6 @@ static int input_filter_info(int count)
 			fprintf(stderr, "error\nkey:name not found\nexit\n");
 			return -1;
 		}
-		fprintf(stdout, "filter name : %s\n", json_string_value(json_object_get(one_filter, "name")));
 
 		json_t *tuple_filter;
 		tuple_filter = json_object_get(one_filter, "5tuple");
@@ -297,133 +296,7 @@ static int input_filter_info(int count)
 		}
 		filter_source_port[size] = htons((uint16_t) src_port_ul);
 	}
-
-	unsigned long int dest_port_ul;
-	unsigned long int src_port_ul;
-	char dest_port_str[256];
-	char src_port_str[256];
-	char dest_ip[256];
-	char src_ip[256];
-	char protocol[256];
-	int res;
-
-	printf("\n[filter:%d]\n", count);
-	/*
-	//ip dest
-	printf("input filter dest ip:");
-	errno = 0;
-	res = scanf("%s", dest_ip);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-	res = inet_pton(AF_INET, dest_ip, &filter_dest_ip[count]);
-	if (res == -1) {
-		perror("inet_pton");
-		return -1;
-	} else if (res == 0) {
-		fprintf(stderr, "invalid address\n");
-		return -1;
-	}
-	//ip src
-	printf("input filter source ip:");
-	errno = 0;
-	res = scanf("%s", src_ip);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-	}
-	res = inet_pton(AF_INET, src_ip, &filter_source_ip[count]);
-	if (res == -1) {
-		perror("inet_pton");
-		return -1;
-	} else if (res == 0) {
-		fprintf(stderr, "invalid address\n");
-		return -1;
-	}
-	*/
-	/*
-	//ip proto
-	printf("input filter protocol:");
-	errno = 0;
-	res = scanf("%s", protocol);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-
-	if (strcmp(protocol, "TCP") == 0) {
-		filter_protocol[count] = IPPROTO_TCP;
-	} else if (strcmp(protocol, "UDP") == 0) {
-		filter_protocol[count] = IPPROTO_UDP;
-	} else {
-		fprintf(stderr, "invalid protocol\n");
-		return -1;
-	}
-	*/
-	/*
-	//port dest
-	printf("input filter dest port:");
-	errno = 0;
-	res = scanf("%s", dest_port_str);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-	errno = 0;
-	dest_port_ul = strtoul(dest_port_str, NULL, 10);
-	if (errno != 0) {
-		perror("strtoul");
-		return -1;
-	} else if (dest_port_ul > UINT16_MAX) {
-		fprintf(stderr, "port number too large\n");
-		return -1;
-	} else if (dest_port_ul == 0) {
-		fprintf(stderr, "invalid port number\n");
-		return -1;
-	}
-	filter_dest_port[count] = htons((uint16_t) dest_port_ul);
-	*/
-	/*
-	//port src
-	printf("input filter source port:");
-	errno = 0;
-	res = scanf("%s", src_port_str);
-
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-	errno = 0;
-	src_port_ul = strtoul(src_port_str, NULL, 10);
-	if (errno != 0) {
-		perror("strtoul");
-		return -1;
-	} else if (src_port_ul > UINT16_MAX) {
-		fprintf(stderr, "port number too large\n");
-		return -1;
-	} else if (src_port_ul == 0) {
-		fprintf(stderr, "invalid port number\n");
-		return -1;
-	}
-	filter_source_port[count] = htons((uint16_t) src_port_ul);
-	*/
 	return 0;
-
 }
 
 static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, int count)
