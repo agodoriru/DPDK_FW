@@ -167,7 +167,7 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 	}
 }
 
-static int input_filter_info(int count)
+static int input_filter_info(void)
 {
 	char path[256];
 	char json_config_path[256];
@@ -180,8 +180,8 @@ static int input_filter_info(int count)
 	json_error_t error;
 	json_config = json_load_file(json_config_path, 0, &error);
 	if(json_config == NULL) {
-		fprintf(stderr, "error on line %d : %s \n", error.line, error.text);
-		fprintf(stderr, "exit\n");
+		fprintf(stderr, "Error on line %d : %s \n", error.line, error.text);
+		fprintf(stderr, "Exit...\n");
 		return -1;
 	}
 	fprintf(stdout, "get json done\n");
@@ -189,9 +189,7 @@ static int input_filter_info(int count)
 	json_t *filter;
 	filter = json_object_get(json_config, "filter");
 	if(filter == NULL) {
-		fprintf(stderr, "error\n");
-		fprintf(stderr, "key:filter not found\n");
-		fprintf(stderr, "exit\n");
+		fprintf(stderr, "Error\nkey : filter not found\nExit...");
 		return -1;
 	}
 
@@ -202,19 +200,23 @@ static int input_filter_info(int count)
 		json_t *name;
 		name = json_object_get(one_filter, "name");
 		if(name == NULL) {
-			fprintf(stderr, "error\nkey:name not found\nexit\n");
+			fprintf(stderr, "Error\nkey:name not found\nExit...\n");
 			return -1;
 		}
 
 		json_t *tuple_filter;
 		tuple_filter = json_object_get(one_filter, "5tuple");
 		if(tuple_filter == NULL) {
-			fprintf(stderr, "error\nkey:5tuple not found\nexit\n");
+			fprintf(stderr, "Error\nkey:5tuple not found\nExit...\n");
 			return -1;
 		}
 
 		json_t *dst_ip;
 		dst_ip = json_object_get(tuple_filter, "dst_ip");
+		if(dst_ip == NULL) {
+			fprintf(stderr, "Error\nkey:dst_ip not found\nExit...\n");
+			return -1;
+		}
 
 		char dst_ip_str[256];
 		strcpy(dst_ip_str, json_string_value(dst_ip));
@@ -231,6 +233,10 @@ static int input_filter_info(int count)
 
 		json_t *src_ip;
 		src_ip = json_object_get(tuple_filter, "src_ip");
+		if(src_ip == NULL) {
+			fprintf(stderr, "Error\nkey:src_ip not found\nExit...\n");
+			return -1;
+		}
 
 		char src_ip_str[256];
 		strcpy(src_ip_str, json_string_value(src_ip));
@@ -246,6 +252,10 @@ static int input_filter_info(int count)
 
 		json_t *protocol;
 		protocol = json_object_get(tuple_filter, "protocol");
+		if(protocol == NULL) {
+			fprintf(stderr, "Error\nkey:protocol not found\nExit...\n");
+			return -1;
+		}
 
 		char protocol_str[256];
 		strcpy(protocol_str,json_string_value(protocol));
@@ -258,6 +268,10 @@ static int input_filter_info(int count)
 
 		json_t *dst_port_json;
 		dst_port_json = json_object_get(tuple_filter, "dst_port");
+		if(dst_port_json == NULL) {
+			fprintf(stderr, "Error\nkey:dst_port not found\nExit...\n");
+			return -1;
+		}
 
 		char dst_port_str[256];
 		strcpy(dst_port_str, json_string_value(dst_port_json));
@@ -279,6 +293,10 @@ static int input_filter_info(int count)
 
 		json_t *src_port_json;
 		src_port_json = json_object_get(tuple_filter, "src_port");
+		if(src_port_json == NULL) {
+			fprintf(stderr, "Error\nkey:src_port not found\nExit...\n");
+			return -1;
+		}
 
 		char src_port_str[256];
 		strcpy(src_port_str, json_string_value(src_port_json));
@@ -558,15 +576,9 @@ int main(int argc, char *argv[])
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
-	for (int i = 0; i < RULE_COUNT; i++) {
-		while (1) {
-			int res = input_filter_info(i);
-			if (res == -1)
-				return -1;
-			if (res == 0)
-				break;
-		}
-	}
+	int res = input_filter_info();
+	if (res != 0)
+		return -1;
 
 	if (enable_log) {
 		logfile = fopen("output.log", "w");
