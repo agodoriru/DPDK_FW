@@ -27,6 +27,7 @@
 
 #define logprintf(...) if (enable_log) { fprintf(logfile, __VA_ARGS__); }
 static bool enable_log;
+static int rule_count;
 static FILE *logfile;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -111,12 +112,12 @@ static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 5
-static struct in_addr filter_source_ip[RULE_COUNT];
-static struct in_addr filter_dest_ip[RULE_COUNT];
-static uint16_t filter_dest_port[RULE_COUNT];
-static uint16_t filter_source_port[RULE_COUNT];
-static uint8_t filter_protocol[RULE_COUNT];
+#define  ARRAY_SIZE 65535
+static struct in_addr filter_source_ip[ARRAY_SIZE];
+static struct in_addr filter_dest_ip[ARRAY_SIZE];
+static uint16_t filter_dest_port[ARRAY_SIZE];
+static uint16_t filter_source_port[ARRAY_SIZE];
+static uint8_t filter_protocol[ARRAY_SIZE];
 
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
@@ -206,6 +207,8 @@ static int input_filter_info(void)
 	}
 
 	size_t size = json_array_size(filter);
+	rule_count = (int)size;
+	fprintf(stdout, "rule_count:%d\n", rule_count);
 	json_t *one_filter;
 	json_array_foreach(filter, size, one_filter) {
 
@@ -441,7 +444,7 @@ static bool filter(struct rte_mbuf *m)
 		logprintf("dest port:%u\n", ntohs(th->dst_port));
 		logprintf("seq:%u\n", ntohl(th->sent_seq));
 		logprintf("ack:%u\n", ntohl(th->recv_ack));
-		for (int i = 0; i < RULE_COUNT; i++) {
+		for (int i = 0; i < rule_count; i++) {
 			bool res = check_packet(ih, (void *)th, i);
 			if (res) {
 				return true;
@@ -463,7 +466,7 @@ static bool filter(struct rte_mbuf *m)
 		logprintf("==== UDP info ====\n");
 		logprintf("src port:%u\n", ntohs(uh->src_port));
 		logprintf("dest port:%u\n", ntohs(uh->dst_port));
-		for (int i = 0; i < RULE_COUNT; i++) {
+		for (int i = 0; i < rule_count; i++) {
 			bool res = check_packet(ih, (void *)uh, i);
 			if (res) {
 				return true;
