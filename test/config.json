@@ -1,4 +1,5 @@
 {
+	"log":true,
 	"filter": [
 	{
 		"name": "sample",
@@ -9,45 +10,7 @@
 			"src_port":"1234",
 			"dst_port":"5678"
 		}
-	},
-	{
-		"name" : "UDP block",
-		"5tuple" : {
-			"src_ip":"1.2.3.4",
-			"dst_ip":"5.6.7.8",
-			"protocol":"UDP",
-			"src_port":"3333",
-			"dst_port":"4444"
-		}
-	},
-	{
-		"name" : "aaa",
-		"5tuple" : {
-			"src_ip":"11.22.33.44",
-			"dst_ip":"12.34.56.78",
-			"protocol":"TCP",
-			"src_port":"1234",
-			"dst_port":"5678"
-		}
-	},
-	{	"name": "bc",
-		"5tuple": {
-			"src_ip":"1.2.3.4",
-			"dst_ip":"4.3.2.1",
-			"protocol":"TCP",
-			"src_port":"22",
-			"dst_port":"11"
-		}
-	},
-	{
-		"name": "a",
-		"5tuple": {
-			"src_ip":"1.2.3.4",
-			"dst_ip":"4.3.2.1",
-			"protocol":"TCP",
-			"src_port":"22",
-			"dst_port":"11"
-		}
 	}
 	]
 }
+

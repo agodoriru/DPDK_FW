@@ -26,7 +26,7 @@
 #define BURST_SIZE 32
 
 #define logprintf(...) if (enable_log) { fprintf(logfile, __VA_ARGS__); }
-static bool enable_log = true;
+static bool enable_log;
 static FILE *logfile;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -185,6 +185,18 @@ static int input_filter_info(void)
 		return -1;
 	}
 	fprintf(stdout, "get json done\n");
+
+	json_t *log;
+	log = json_object_get(json_config, "log");
+	if(log == NULL) {
+		enable_log = false;
+	}
+
+	if(json_is_true(log)) {
+		enable_log = true;
+	} else if(json_is_false(log)) {
+		enable_log = false;
+	}
 
 	json_t *filter;
 	filter = json_object_get(json_config, "filter");
