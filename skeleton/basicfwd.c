@@ -365,15 +365,15 @@ static bool filter(struct rte_mbuf *m)
 	lest -= sizeof(struct ipv4_hdr);
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
 				     sizeof(struct ether_hdr));
-	int ihl_mask = 15;	// 0x00001111
+
 	int version_mask = 240;	// 0x11110000
 	int oplen =
-	    ((ih->version_ihl) & ihl_mask) * 4 - sizeof(struct ipv4_hdr);
+	    ((ih->version_ihl) & IPV4_HDR_IHL_MASK) * 4 - sizeof(struct ipv4_hdr);
 
 	logprintf("==== IP info ====\n");
 	logprintf("ip header version:%d\n",
 		  (ih->version_ihl & version_mask) >> 4)
-	    logprintf("ip header length:%d\n", ih->version_ihl & ihl_mask)
+	    logprintf("ip header length:%d\n", ih->version_ihl & IPV4_HDR_IHL_MASK)
 	    logprintf("src ip:%s\n",
 		      IP_address_int_to_IP_address_str(ih->src_addr, buf,
 						       sizeof(buf)));
