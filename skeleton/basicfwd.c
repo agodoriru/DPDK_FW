@@ -366,13 +366,10 @@ static bool filter(struct rte_mbuf *m)
 	ih = rte_pktmbuf_mtod_offset(m, struct ipv4_hdr *,
 				     sizeof(struct ether_hdr));
 
-	int version_mask = 240;	// 0x11110000
 	int oplen =
 	    ((ih->version_ihl) & IPV4_HDR_IHL_MASK) * 4 - sizeof(struct ipv4_hdr);
 
 	logprintf("==== IP info ====\n");
-	logprintf("ip header version:%d\n",
-		  (ih->version_ihl & version_mask) >> 4)
 	    logprintf("ip header length:%d\n", ih->version_ihl & IPV4_HDR_IHL_MASK)
 	    logprintf("src ip:%s\n",
 		      IP_address_int_to_IP_address_str(ih->src_addr, buf,
