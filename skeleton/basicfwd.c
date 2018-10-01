@@ -170,16 +170,9 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 
 static int input_filter_info(void)
 {
-	char path[256];
-	char json_config_path[256];
-	memset(path, '\0', 256);
-	getcwd(path, 256);
-	// will fix
-	sprintf(json_config_path, "%s/../test/config.json", path);
-
 	json_t *json_config;
 	json_error_t error;
-	json_config = json_load_file(json_config_path, 0, &error);
+	json_config = json_load_file("config.json", 0, &error);
 	if(json_config == NULL) {
 		fprintf(stderr, "Error on line %d : %s \n", error.line, error.text);
 		fprintf(stderr, "Exit...\n");

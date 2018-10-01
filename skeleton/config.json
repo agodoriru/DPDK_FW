@@ -1,0 +1,28 @@
+{
+	"log":true,
+	"_log_comment" : "if true make output.log else if false don' make output.log",
+
+	"filter": [
+	{
+		"name": "sample",
+		"5tuple": {
+			"src_ip":"192.168.0.1",
+			"dst_ip":"192.168.1.1",
+			"protocol":"TCP",
+			"src_port":"1234",
+			"dst_port":"5678"
+		}
+	},
+	{
+		"name": "hogehoge",
+		"5tuple": {
+			"src_ip":"1.2.3.4",
+			"dst_ip":"5.6.7.8",
+			"protocol":"UDP",
+			"src_port":"123",
+			"dst_port":"456"
+		}
+	}
+	]
+}
+
