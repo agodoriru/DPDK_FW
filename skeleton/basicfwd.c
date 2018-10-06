@@ -170,15 +170,15 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 
 static int input_filter_info(void)
 {
+	fprintf(stdout, "JSON: Analyzing Config...\n");
 	json_t *json_config;
 	json_error_t error;
 	json_config = json_load_file("config.json", 0, &error);
 	if(json_config == NULL) {
-		fprintf(stderr, "Error on line %d : %s \n", error.line, error.text);
+		fprintf(stderr, "JSON: Error on line %d : %s \n", error.line, error.text);
 		fprintf(stderr, "Exit...\n");
 		return -1;
 	}
-	fprintf(stdout, "get json done\n");
 
 	json_t *log;
 	log = json_object_get(json_config, "log");
@@ -188,20 +188,22 @@ static int input_filter_info(void)
 
 	if(json_is_true(log)) {
 		enable_log = true;
+		fprintf(stdout, "JSON: Enable log ON\n");
 	} else if(json_is_false(log)) {
 		enable_log = false;
+		fprintf(stderr, "JSON: Enable log OFF\n");
 	}
 
 	json_t *filter;
 	filter = json_object_get(json_config, "filter");
 	if(filter == NULL) {
-		fprintf(stderr, "Error\nkey : filter not found\nExit...");
+		fprintf(stderr, "JSON: Error\nkey : filter not found\nExit...");
 		return -1;
 	}
 
 	size_t size = json_array_size(filter);
 	rule_count = (int)size;
-	fprintf(stdout, "rule_count:%d\n", rule_count);
+	fprintf(stdout, "JSON: Rule Count:%d\n", rule_count);
 	json_t *one_filter;
 	json_array_foreach(filter, size, one_filter) {
 
@@ -235,7 +237,7 @@ static int input_filter_info(void)
 			perror("inet_pton");
 			return -1;
 		} else if (res == 0) {
-			fprintf(stderr, "invalid dst ip address\n");
+			fprintf(stderr, "Error\ninvalid dst ip address\nExit...\n");
 			return -1;
 		}
 
@@ -254,7 +256,7 @@ static int input_filter_info(void)
 			perror("inet_pton");
 			return -1;
 		} else if (res == 0) {
-			fprintf(stderr, "invalid src ip address\n");
+			fprintf(stderr, "Error\ninvalid src ip address\nExit...\n");
 			return -1;
 		}
 
@@ -291,10 +293,10 @@ static int input_filter_info(void)
 			perror("strtoul");
 			return -1;
 		} else if (dst_port_ul > UINT16_MAX) {
-			fprintf(stderr, "port number too large\n");
+			fprintf(stderr, "Error\nport number too large\n");
 			return -1;
 		} else if (dst_port_ul == 0) {
-			fprintf(stderr, "invalid port number\n");
+			fprintf(stderr, "Error\ninvalid port number\n");
 			return -1;
 		}
 		filter_dest_port[size] = htons((uint16_t) dst_port_ul);
@@ -316,12 +318,13 @@ static int input_filter_info(void)
 			perror("strtoul");
 			return -1;
 		} else if (src_port_ul > UINT16_MAX) {
-			fprintf(stderr, "port number too large\n");
+			fprintf(stderr, "Error\nport number too large\n");
 		} else if (src_port_ul == 0){
-			fprintf(stderr, "invalid port number\n");
+			fprintf(stderr, "Error\ninvalid port number\n");
 		}
 		filter_source_port[size] = htons((uint16_t) src_port_ul);
 	}
+	fprintf(stdout, "JSON: Analyze config Done\n");
 	return 0;
 }
 
