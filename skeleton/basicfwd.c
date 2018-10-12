@@ -15,6 +15,9 @@
 #include <rte_udp.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <jansson.h>
+
 #define RX_RING_SIZE 1024
 #define TX_RING_SIZE 1024
 
@@ -23,7 +26,8 @@
 #define BURST_SIZE 32
 
 #define logprintf(...) if (enable_log) { fprintf(logfile, __VA_ARGS__); }
-static bool enable_log = true;
+static bool enable_log;
+static int rule_count;
 static FILE *logfile;
 
 static const struct rte_eth_conf port_conf_default = {
@@ -108,12 +112,12 @@ static inline int port_init(uint16_t port, struct rte_mempool *mbuf_pool)
 	return 0;
 }
 
-#define  RULE_COUNT 1
-static struct in_addr filter_source_ip[RULE_COUNT];
-static struct in_addr filter_dest_ip[RULE_COUNT];
-static uint16_t filter_dest_port[RULE_COUNT];
-static uint16_t filter_source_port[RULE_COUNT];
-static uint8_t filter_protocol[RULE_COUNT];
+#define  ARRAY_SIZE 65535
+static struct in_addr filter_source_ip[ARRAY_SIZE];
+static struct in_addr filter_dest_ip[ARRAY_SIZE];
+static uint16_t filter_dest_port[ARRAY_SIZE];
+static uint16_t filter_source_port[ARRAY_SIZE];
+static uint8_t filter_protocol[ARRAY_SIZE];
 
 static char *mac_address_int_to_str(uint8_t * hwaddr, char *buff, size_t size)
 {
@@ -164,128 +168,164 @@ static const char *get_ip_protocol(const struct ipv4_hdr *iphdr)
 	}
 }
 
-static int input_filter_info(int count)
+static int input_filter_info(void)
 {
-	unsigned long int dest_port_ul;
-	unsigned long int src_port_ul;
-	char dest_port_str[256];
-	char src_port_str[256];
-	char dest_ip[256];
-	char src_ip[256];
-	char protocol[256];
-	int res;
-
-	printf("\n[filter:%d]\n", count);
-	//ip dest
-	printf("input filter dest ip:");
-	errno = 0;
-	res = scanf("%s", dest_ip);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-	res = inet_pton(AF_INET, dest_ip, &filter_dest_ip[count]);
-	if (res == -1) {
-		perror("inet_pton");
-		return -1;
-	} else if (res == 0) {
-		fprintf(stderr, "invalid address\n");
-		return -1;
-	}
-	//ip src
-	printf("input filter source ip:");
-	errno = 0;
-	res = scanf("%s", src_ip);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-	}
-	res = inet_pton(AF_INET, src_ip, &filter_source_ip[count]);
-	if (res == -1) {
-		perror("inet_pton");
-		return -1;
-	} else if (res == 0) {
-		fprintf(stderr, "invalid address\n");
-		return -1;
-	}
-	//ip proto
-	printf("input filter protocol:");
-	errno = 0;
-	res = scanf("%s", protocol);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
+	fprintf(stdout, "JSON: Analyzing Config...\n");
+	json_t *json_config;
+	json_error_t error;
+	json_config = json_load_file("config.json", 0, &error);
+	if(json_config == NULL) {
+		fprintf(stderr, "JSON: Error on line %d : %s \n", error.line, error.text);
+		fprintf(stderr, "Exit...\n");
 		return -1;
 	}
 
-	if (strcmp(protocol, "TCP") == 0) {
-		filter_protocol[count] = IPPROTO_TCP;
-	} else if (strcmp(protocol, "UDP") == 0) {
-		filter_protocol[count] = IPPROTO_UDP;
-	} else {
-		fprintf(stderr, "invalid protocol\n");
+	json_t *log;
+	log = json_object_get(json_config, "log");
+	if(log == NULL) {
+		enable_log = false;
+	}
+
+	if(json_is_true(log)) {
+		enable_log = true;
+		fprintf(stdout, "JSON: Enable log ON\n");
+	} else if(json_is_false(log)) {
+		enable_log = false;
+		fprintf(stderr, "JSON: Enable log OFF\n");
+	}
+
+	json_t *filter;
+	filter = json_object_get(json_config, "filter");
+	if(filter == NULL) {
+		fprintf(stderr, "JSON: Error\nkey : filter not found\nExit...");
 		return -1;
 	}
 
-	//port dest
-	printf("input filter dest port:");
-	errno = 0;
-	res = scanf("%s", dest_port_str);
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
-	}
-	errno = 0;
-	dest_port_ul = strtoul(dest_port_str, NULL, 10);
-	if (errno != 0) {
-		perror("strtoul");
-		return -1;
-	} else if (dest_port_ul > UINT16_MAX) {
-		fprintf(stderr, "port number too large\n");
-		return -1;
-	} else if (dest_port_ul == 0) {
-		fprintf(stderr, "invalid port number\n");
-		return -1;
-	}
-	filter_dest_port[count] = htons((uint16_t) dest_port_ul);
+	size_t size = json_array_size(filter);
+	rule_count = (int)size;
+	fprintf(stdout, "JSON: Rule Count:%d\n", rule_count);
+	json_t *one_filter;
+	json_array_foreach(filter, size, one_filter) {
 
-	//port src
-	printf("input filter source port:");
-	errno = 0;
-	res = scanf("%s", src_port_str);
+		json_t *name;
+		name = json_object_get(one_filter, "name");
+		if(name == NULL) {
+			fprintf(stderr, "Error\nkey:name not found\nExit...\n");
+			return -1;
+		}
 
-	if (errno != 0) {
-		perror("scanf");
-		return -1;
-	} else if (res != 1) {
-		fprintf(stderr, "scanf failed\n");
-		return -1;
+		json_t *tuple_filter;
+		tuple_filter = json_object_get(one_filter, "5tuple");
+		if(tuple_filter == NULL) {
+			fprintf(stderr, "Error\nkey:5tuple not found\nExit...\n");
+			return -1;
+		}
+
+		json_t *dst_ip;
+		dst_ip = json_object_get(tuple_filter, "dst_ip");
+		if(dst_ip == NULL) {
+			fprintf(stderr, "Error\nkey:dst_ip not found\nExit...\n");
+			return -1;
+		}
+
+		char dst_ip_str[256];
+		strcpy(dst_ip_str, json_string_value(dst_ip));
+
+		int res;
+		res = inet_pton(AF_INET, dst_ip_str, &filter_dest_ip[size]);
+		if (res == -1) {
+			perror("inet_pton");
+			return -1;
+		} else if (res == 0) {
+			fprintf(stderr, "Error\ninvalid dst ip address\nExit...\n");
+			return -1;
+		}
+
+		json_t *src_ip;
+		src_ip = json_object_get(tuple_filter, "src_ip");
+		if(src_ip == NULL) {
+			fprintf(stderr, "Error\nkey:src_ip not found\nExit...\n");
+			return -1;
+		}
+
+		char src_ip_str[256];
+		strcpy(src_ip_str, json_string_value(src_ip));
+
+		res = inet_pton(AF_INET, src_ip_str, &filter_source_ip[size]);
+		if (res == -1) {
+			perror("inet_pton");
+			return -1;
+		} else if (res == 0) {
+			fprintf(stderr, "Error\ninvalid src ip address\nExit...\n");
+			return -1;
+		}
+
+		json_t *protocol;
+		protocol = json_object_get(tuple_filter, "protocol");
+		if(protocol == NULL) {
+			fprintf(stderr, "Error\nkey:protocol not found\nExit...\n");
+			return -1;
+		}
+
+		char protocol_str[256];
+		strcpy(protocol_str,json_string_value(protocol));
+
+		if (strcmp(protocol_str, "TCP") == 0) {
+			filter_protocol[size] = IPPROTO_TCP;
+		} else if(strcmp(protocol_str, "UDP") == 0) {
+			filter_protocol[size] = IPPROTO_UDP;
+		}
+
+		json_t *dst_port_json;
+		dst_port_json = json_object_get(tuple_filter, "dst_port");
+		if(dst_port_json == NULL) {
+			fprintf(stderr, "Error\nkey:dst_port not found\nExit...\n");
+			return -1;
+		}
+
+		char dst_port_str[256];
+		strcpy(dst_port_str, json_string_value(dst_port_json));
+
+		errno = 0;
+		unsigned long int dst_port_ul;
+		dst_port_ul = strtoul(dst_port_str, NULL, 10);
+		if (errno != 0) {
+			perror("strtoul");
+			return -1;
+		} else if (dst_port_ul > UINT16_MAX) {
+			fprintf(stderr, "Error\nport number too large\n");
+			return -1;
+		} else if (dst_port_ul == 0) {
+			fprintf(stderr, "Error\ninvalid port number\n");
+			return -1;
+		}
+		filter_dest_port[size] = htons((uint16_t) dst_port_ul);
+
+		json_t *src_port_json;
+		src_port_json = json_object_get(tuple_filter, "src_port");
+		if(src_port_json == NULL) {
+			fprintf(stderr, "Error\nkey:src_port not found\nExit...\n");
+			return -1;
+		}
+
+		char src_port_str[256];
+		strcpy(src_port_str, json_string_value(src_port_json));
+
+		errno = 0;
+		unsigned long int src_port_ul;
+		src_port_ul = strtoul(src_port_str, NULL, 10);
+		if(errno != 0) {
+			perror("strtoul");
+			return -1;
+		} else if (src_port_ul > UINT16_MAX) {
+			fprintf(stderr, "Error\nport number too large\n");
+		} else if (src_port_ul == 0){
+			fprintf(stderr, "Error\ninvalid port number\n");
+		}
+		filter_source_port[size] = htons((uint16_t) src_port_ul);
 	}
-	errno = 0;
-	src_port_ul = strtoul(src_port_str, NULL, 10);
-	if (errno != 0) {
-		perror("strtoul");
-		return -1;
-	} else if (src_port_ul > UINT16_MAX) {
-		fprintf(stderr, "port number too large\n");
-		return -1;
-	} else if (src_port_ul == 0) {
-		fprintf(stderr, "invalid port number\n");
-		return -1;
-	}
-	filter_source_port[count] = htons((uint16_t) src_port_ul);
+	fprintf(stdout, "JSON: Analyze config Done\n");
 	return 0;
-
 }
 
 static bool check_packet(struct ipv4_hdr *ih, void *l4hdr, int count)
@@ -397,7 +437,7 @@ static bool filter(struct rte_mbuf *m)
 		logprintf("dest port:%u\n", ntohs(th->dst_port));
 		logprintf("seq:%u\n", ntohl(th->sent_seq));
 		logprintf("ack:%u\n", ntohl(th->recv_ack));
-		for (int i = 0; i < RULE_COUNT; i++) {
+		for (int i = 0; i < rule_count; i++) {
 			bool res = check_packet(ih, (void *)th, i);
 			if (res) {
 				return true;
@@ -419,7 +459,7 @@ static bool filter(struct rte_mbuf *m)
 		logprintf("==== UDP info ====\n");
 		logprintf("src port:%u\n", ntohs(uh->src_port));
 		logprintf("dest port:%u\n", ntohs(uh->dst_port));
-		for (int i = 0; i < RULE_COUNT; i++) {
+		for (int i = 0; i < rule_count; i++) {
 			bool res = check_packet(ih, (void *)uh, i);
 			if (res) {
 				return true;
@@ -544,13 +584,9 @@ int main(int argc, char *argv[])
 	if (rte_lcore_count() > 1)
 		printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
-	for (int i = 0; i < RULE_COUNT; i++) {
-		while (1) {
-			int res = input_filter_info(i);
-			if (res == 0)
-				break;
-		}
-	}
+	int res = input_filter_info();
+	if (res != 0)
+		return -1;
 
 	if (enable_log) {
 		logfile = fopen("output.log", "w");
@@ -559,6 +595,13 @@ int main(int argc, char *argv[])
 			return (-1);
 		}
 	}
+	/*
+	// for debug use
+	fprintf(stdout, "for debug use\n");
+	for(int i = 0 ; i < 3; i++) {
+		fprintf(stdout, "filter pro[%d] : %hhu\n", i, filter_protocol[i]);
+	}
+	*/
 
 	/* Call lcore_main on the master core only. */
 	lcore_main();
