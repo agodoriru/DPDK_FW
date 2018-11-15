@@ -617,5 +617,8 @@ int main(int argc, char *argv[])
 	if (enable_log) {
 		fclose(logfile);
 	}
+
+	printf("Bye\n");
+
 	return 0;
 }
