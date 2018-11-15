@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <signal.h>
 #include <jansson.h>
 
 #define RX_RING_SIZE 1024
@@ -29,6 +30,7 @@
 static bool enable_log;
 static int rule_count;
 static FILE *logfile;
+static bool quit_handle = false;
 
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
@@ -471,13 +473,18 @@ static bool filter(struct rte_mbuf *m)
 	}
 }
 
+static void quit_handler(int signum)
+{
+	printf("\nsignal %d Exit...\n", signum);
+	quit_handle = true;
+}
+
 /*
  * The lcore main. This is the main thread that does the work, reading from
  * an input port and writing to an output port.
  */
 
-static __attribute__ ((noreturn))
-void lcore_main(void)
+static void lcore_main(void)
 {
 	uint16_t port;
 
@@ -496,7 +503,7 @@ void lcore_main(void)
 	       rte_lcore_id());
 
 	/* Run until the application is quit or killed. */
-	for (;;) {
+	do {
 		/*
 		 * Receive packets on a port and forward them on the paired
 		 * port. The mapping is 0 -> 1, 1 -> 0, 2 -> 3, 3 -> 2, etc.
@@ -540,7 +547,7 @@ void lcore_main(void)
 					rte_pktmbuf_free(tx_bufs[buf]);
 			}
 		}
-	}
+	} while(!quit_handle);
 }
 
 /*
@@ -603,6 +610,7 @@ int main(int argc, char *argv[])
 	}
 	*/
 
+	signal(SIGINT, quit_handler);
 	/* Call lcore_main on the master core only. */
 	lcore_main();
 
