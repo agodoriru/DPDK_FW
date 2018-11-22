@@ -410,15 +410,15 @@ static bool filter(struct rte_mbuf *m)
 	    ((ih->version_ihl) & IPV4_HDR_IHL_MASK) * 4 - sizeof(struct ipv4_hdr);
 
 	logprintf("==== IP info ====\n");
-	    logprintf("ip header length:%d\n", ih->version_ihl & IPV4_HDR_IHL_MASK)
-	    logprintf("src ip:%s\n",
+	logprintf("ip version:%d\n", ih->version_ihl >> 4);
+	logprintf("ip header length:%d\n", ih->version_ihl & IPV4_HDR_IHL_MASK)
+	logprintf("src ip:%s\n",
 		      IP_address_int_to_IP_address_str(ih->src_addr, buf,
 						       sizeof(buf)));
 	logprintf("dest ip:%s\n",
 		  IP_address_int_to_IP_address_str(ih->dst_addr, buf,
 						   sizeof(buf)));
-	logprintf("ip protocol:[%s]\n", get_ip_protocol(ih));
-	logprintf("tol:%u\n", ih->total_length);
+	logprintf("ip protocol:[%s](%d)\n", get_ip_protocol(ih), ih->next_proto_id);
 	logprintf("oplen:%u\n", oplen);
 	lest -= oplen;
 	if (ih->next_proto_id == IPPROTO_TCP) {
