@@ -611,6 +611,8 @@ int main(int argc, char *argv[])
 	*/
 
 	signal(SIGINT, quit_handler);
+	signal(SIGTERM, quit_handler);
+	signal(SIGKILL, quit_handler);
 	/* Call lcore_main on the master core only. */
 	lcore_main();
 
