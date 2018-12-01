@@ -10,7 +10,9 @@
 #include <rte_lcore.h>
 #include <rte_mbuf.h>
 #include <rte_ether.h>
+#include <rte_arp.h>
 #include <rte_ip.h>
+#include <rte_icmp.h>
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <arpa/inet.h>
@@ -393,6 +395,17 @@ static bool filter(struct rte_mbuf *m)
 		break;
 	case ETHER_TYPE_ARP:
 		logprintf("[ARP]\n");
+
+		struct arp_hdr *ah;;
+		ah = rte_pktmbuf_mtod_offset(m, struct arp_hdr *,sizeof(struct ether_hdr));
+		logprintf("arp hardware:%d\n", ntohs(ah->arp_hrd));
+		logprintf("arp hln:%d\n", ah->arp_hln);
+		logprintf("arp pln:%d\n", ah->arp_pln);
+		logprintf("arp pro:%d\n", ntohs(ah->arp_pro));
+		logprintf("arp src host:%s\n", mac_address_int_to_str(ah->arp_data.arp_sha.addr_bytes, buf, sizeof(buf)));
+		logprintf("arp tha host:%s\n", mac_address_int_to_str(ah->arp_data.arp_tha.addr_bytes, buf, sizeof(buf)));
+		logprintf("arp src ip:%s\n", IP_address_int_to_IP_address_str(ah->arp_data.arp_sip, buf, sizeof(buf)));
+		logprintf("arp tha ip:%s\n", IP_address_int_to_IP_address_str(ah->arp_data.arp_tip, buf, sizeof(buf)));
 		return false;
 	default:
 		logprintf("\n");
@@ -412,6 +425,13 @@ static bool filter(struct rte_mbuf *m)
 	logprintf("==== IP info ====\n");
 	logprintf("ip version:%d\n", ih->version_ihl >> 4);
 	logprintf("ip header length:%d\n", ih->version_ihl & IPV4_HDR_IHL_MASK)
+	logprintf("total length:%d\n", ntohs(ih->total_length));
+	logprintf("TOS:%d\n", ih->type_of_service);
+	logprintf("id:%d\n", ntohs(ih->packet_id));
+	logprintf("frag:%x\n", ntohs(ih->fragment_offset) >> 13);
+	logprintf("fragment offset:%d\n", ntohs(ih->fragment_offset) & 0x1fff)
+	logprintf("TTL:%d\n", ih->time_to_live);
+	logprintf("cksum:%d\n", ntohs(ih->hdr_checksum))
 	logprintf("src ip:%s\n",
 		      IP_address_int_to_IP_address_str(ih->src_addr, buf,
 						       sizeof(buf)));
@@ -465,6 +485,23 @@ static bool filter(struct rte_mbuf *m)
 				return true;
 			}
 		}
+		return false;
+	} else if(ih->next_proto_id == IPPROTO_ICMP) {
+
+		if (lest < (int)sizeof(struct icmp_hdr)) {
+			return true;
+		}
+		lest -= sizeof(struct icmp_hdr);
+		struct icmp_hdr *ich =
+		    rte_pktmbuf_mtod_offset(m, struct icmp_hdr *,
+					    sizeof(struct ether_hdr) +
+					    sizeof(struct ipv4_hdr) + oplen);
+		logprintf("==== ICMP info ====\n");
+		logprintf("type:%u\n", ich->icmp_type);
+		logprintf("code:%u\n", ich->icmp_code);
+		logprintf("cksum:%u\n", ntohs(ich->icmp_cksum));
+		logprintf("id:%u\n", ntohs(ich->icmp_ident));
+		logprintf("seq:%u\n", ntohs(ich->icmp_seq_nb));
 		return false;
 	} else {
 		return false;
