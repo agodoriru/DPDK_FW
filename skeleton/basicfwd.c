@@ -428,8 +428,8 @@ static bool filter(struct rte_mbuf *m)
 	logprintf("total length:%d\n", ntohs(ih->total_length));
 	logprintf("TOS:%d\n", ih->type_of_service);
 	logprintf("id:%d\n", ntohs(ih->packet_id));
-	logprintf("frag:%x\n", ntohs(ih->fragment_offset) >> 13);
-	logprintf("fragment offset:%d\n", ntohs(ih->fragment_offset) & 0x1fff)
+	logprintf("frag 0x%x (DF:%x MF:%x)\n", ntohs(ih->fragment_offset) >> 13, ntohs(ih->fragment_offset) >> 14 & 0x1, ntohs(ih->fragment_offset) >> 13 & 0x1);
+	logprintf("fragment offset:0x%x\n", ntohs(ih->fragment_offset) & 0x1fff)
 	logprintf("TTL:%d\n", ih->time_to_live);
 	logprintf("cksum:%d\n", ntohs(ih->hdr_checksum))
 	logprintf("src ip:%s\n",
